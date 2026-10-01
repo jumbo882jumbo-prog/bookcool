@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ตะกร้าสินค้า - E-Book Store</title>
+    <!-- โหลด Tailwind CSS จาก CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Prompt จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
+
+    <!-- 1. แถบนำทางด้านบน (Navbar) -->
+    <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- โลโก้ (คลิกกลับไปที่ index.html) -->
+            <a href="index.html" class="flex items-center space-x-2 hover:opacity-90 transition">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded font-bold text-sm">E</span>
+                <span class="font-bold text-lg tracking-wide">E-Book Store</span>
+            </a>
+            
+            <div class="flex items-center space-x-3 sm:space-x-4 text-sm">
+                <!-- ปุ่มกลับไปหน้าเลือกซื้อหนังสือ (คลิกกลับไปที่ index.html) -->
+                <a href="index.html" class="text-sm text-gray-300 hover:text-white flex items-center gap-1 transition">
+                    🏠 ซื้อหนังสือต่อ
+                </a>
+                <!-- ลิงก์ไปหน้าหนังสือของฉัน -->
+                <a href="my-books.html" class="text-sm text-gray-300 hover:text-white flex items-center gap-1 transition">
+                    📚 หนังสือของฉัน
+                </a>
+                <!-- ปุ่มลัดไปหลังบ้าน Admin -->
+                <a href="admin.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-gray-700 transition hidden sm:inline-block">
+                    ⚙️ หลังบ้าน
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. เนื้อหาหลักของตะกร้าสินค้า -->
+    <main class="max-w-4xl mx-auto px-4 py-10 w-full flex-grow">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                <span>🛒</span> ตะกร้าสินค้าของคุณ
+            </h1>
+            <a href="index.html" class="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                ← ซื้อหนังสือเพิ่ม
+            </a>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
+            <div class="p-6 divide-y divide-gray-100" id="cartItemList">
+                <!-- รายการหนังสือในตะกร้า 1 -->
+                <div class="flex flex-col sm:flex-row items-center justify-between py-4 gap-4" id="item-1">
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100"
+                            alt="ถอดรหัสวิญญาณแห่งดวงดาว" class="w-16 h-20 object-cover rounded-lg shadow-sm">
+                        <div>
+                            <h3 class="font-bold text-base">ถอดรหัสวิญญาณแห่งดวงดาว</h3>
+                            <p class="text-xs text-gray-500">ผู้แต่ง: กวิน ทัศนีย์</p>
+                            <span class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded mt-1 inline-block">E-Book (PDF/EPUB)</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between w-full sm:w-auto gap-6">
+                        <span class="font-bold text-lg text-blue-600">฿300.00</span>
+                        <button onclick="removeItem('item-1')" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition cursor-pointer">
+                            ลบออก
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- สรุปยอดเงินและปุ่มดำเนินการชำระเงิน -->
+            <div class="bg-gray-50 p-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">ยอดรวมทั้งสิ้น (1 เล่ม)</p>
+                    <h2 class="text-2xl font-bold text-blue-600">฿300.00</h2>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <!-- ปุ่มกลับไปเลือกซื้อหนังสือ -->
+                    <a href="index.html"
+                        class="text-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-3 rounded-xl transition">
+                        ← เลือกซื้อหนังสือต่อ
+                    </a>
+                    <!-- ปุ่มดำเนินการชำระเงิน (เชื่อมโยงไป checkout.html) -->
+                    <a href="checkout.html"
+                        class="text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl shadow hover:shadow-md transition">
+                        💳 ดำเนินการชำระเงิน →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 3. ส่วนท้ายเว็บ (Footer) -->
+    <footer class="bg-white border-t border-gray-200 py-6 text-center text-sm text-gray-500">
+        <div class="flex flex-wrap justify-center gap-6 mb-2">
+            <a href="index.html" class="hover:text-blue-600">หน้าแรก</a>
+            <a href="cart.html" class="hover:text-blue-600 font-semibold text-blue-600">ตะกร้าสินค้า</a>
+            <a href="checkout.html" class="hover:text-blue-600">ชำระเงิน</a>
+            <a href="my-books.html" class="hover:text-blue-600">หนังสือของฉัน</a>
+            <a href="admin.html" class="hover:text-red-600">ระบบหลังบ้าน (Admin)</a>
+        </div>
+        <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
+    </footer>
+
+    <script>
+        function removeItem(elementId) {
+            if (confirm('คุณต้องการนำหนังสือเล่มนี้ออกจากตะกร้าใช่หรือไม่?')) {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.remove();
+                    alert('นำหนังสือออกจากตะกร้าแล้ว');
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

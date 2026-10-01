@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Book Store - แพลตฟอร์มจำหน่ายหนังสือดิจิทัล</title>
+    <!-- โหลด Tailwind CSS จาก CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Prompt จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-50 text-gray-800">
+
+    <!-- 1. แถบนำทางด้านบน (Navbar) -->
+    <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- โลโก้ (คลิกกลับหน้าแรก) -->
+            <a href="index.html" class="flex items-center space-x-2 hover:opacity-90 transition">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded font-bold text-sm">E</span>
+                <span class="font-bold text-lg tracking-wide">E-Book Store</span>
+            </a>
+
+            <!-- ช่องค้นหาตรงกลาง -->
+            <div class="hidden md:flex items-center flex-1 max-w-md mx-8">
+                <div class="relative w-full">
+                    <input type="text" id="searchInput" placeholder="ค้นหาชื่อหนังสือ หรือผู้แต่ง..."
+                        class="w-full bg-gray-800 text-sm text-white placeholder-gray-400 rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button class="absolute right-3 top-2.5 text-gray-400 hover:text-white">🔍</button>
+                </div>
+            </div>
+
+            <!-- เมนูด้านขวา -->
+            <div class="flex items-center space-x-4 sm:space-x-6 text-sm">
+                <a href="index.html" class="hover:text-blue-400 flex items-center gap-1 transition">🏠 หน้าแรก</a>
+                <a href="#bookSection" class="hover:text-blue-400 flex items-center gap-1 transition">📂 หมวดหมู่</a>
+
+                <!-- ปุ่มตะกร้าสินค้า (เชื่อมโยงไป cart.html) -->
+                <a href="cart.html" id="cartLink"
+                    class="hover:text-blue-400 flex items-center gap-1 relative transition" title="ดูตะกร้าสินค้า">
+                    🛒 ตะกร้า
+                    <span id="cartCount"
+                        class="absolute -top-2 -right-3 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.2">0</span>
+                </a>
+
+                <!-- ลิงก์ไปหน้าหนังสือของฉัน (ประวัติการซื้อ) -->
+                <a href="my-books.html" class="hover:text-blue-400 flex items-center gap-1 transition" title="หนังสือของฉันที่ซื้อแล้ว">
+                    📚 หนังสือของฉัน
+                </a>
+
+                <!-- ปุ่มสลับไปหน้าระบบหลังบ้าน Admin (เชื่อมโยงไป admin.html) -->
+                <a href="admin.html"
+                    class="flex items-center space-x-1.5 bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 transition shadow-sm"
+                    title="ระบบบริหารจัดการหลังบ้าน">
+                    <span class="bg-red-600 text-white px-1.5 py-0.5 rounded text-[11px] font-bold">ADMIN</span>
+                    <span class="hidden sm:inline">ระบบหลังบ้าน</span>
+                </a>
+
+                <!-- ข้อมูลผู้ใช้งาน -->
+                <div class="hidden lg:flex items-center space-x-2 border-l border-gray-700 pl-4">
+                    <div
+                        class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">
+                        พล</div>
+                    <span>พลอยแสง (Admin Store)</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. ส่วนฮีโร่แบนเนอร์ (Hero Section) -->
+    <main class="max-w-7xl mx-auto px-4 mt-6">
+        <section
+            class="bg-blue-900 text-white rounded-2xl p-8 md:p-12 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between">
+            <div class="max-w-2xl z-10">
+                <span
+                    class="bg-blue-800 text-blue-200 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider mb-4 inline-block">
+                    แพลตฟอร์มแห่งการเรียนรู้และพัฒนาทักษะ
+                </span>
+                <h1 class="text-3xl md:text-5xl font-bold mb-4 leading-tight">
+                    ค้นพบความรู้และเปิดโลกการอ่านกับ E-Book
+                </h1>
+                <p class="text-blue-100 text-sm md:text-base mb-6 leading-relaxed">
+                    เลือกซื้อ E-Book คุณภาพ ดาวน์โหลดไฟล์ได้ทันทีหลังยืนยันการชำระเงิน
+                    พร้อมระบบจำลองการสั่งซื้อและการบริหารจัดการร้านครบวงจร
+                </p>
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="scrollToBooks()"
+                        class="bg-white text-blue-900 font-semibold px-6 py-3 rounded-xl shadow hover:bg-blue-50 transition duration-200 flex items-center gap-2">
+                        📖 เลือกดูหนังสือทั้งหมด
+                    </button>
+                    <a href="cart.html"
+                        class="bg-blue-700 text-white font-semibold px-6 py-3 rounded-xl shadow hover:bg-blue-600 transition duration-200 flex items-center gap-2">
+                        🛒 ดูตะกร้าสินค้า
+                    </a>
+                </div>
+            </div>
+            <div class="mt-8 md:mt-0 text-7xl md:text-9xl opacity-20 md:opacity-40 z-10 select-none">
+                📚
+            </div>
+        </section>
+
+        <!-- 3. ส่วนรายการหนังสือ (Book Listing) -->
+        <section id="bookSection" class="mt-10 mb-16">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div class="flex items-center gap-2">
+                    <h2 class="text-2xl font-bold">🛒 หนังสือทั้งหมด</h2>
+                    <span id="bookCount" class="text-gray-500 text-sm font-medium">(4 เล่ม)</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="text-gray-500">เรียงตาม:</span>
+                    <select id="sortSelect"
+                        class="bg-white border border-gray-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="latest">มาใหม่ล่าสุด</option>
+                        <option value="price-low">ราคา: ต่ำไปสูง</option>
+                        <option value="price-high">ราคา: สูงไปต่ำ</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- แถบตัวกรองหมวดหมู่ (Filter Pills) -->
+            <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-6 text-sm" id="categoryFilters">
+                <button
+                    class="filter-btn bg-blue-600 text-white px-4 py-2 rounded-full font-medium whitespace-nowrap shadow-sm"
+                    data-category="all">
+                    # ดูหมวดหมู่ทั้งหมด
+                </button>
+                <button
+                    class="filter-btn bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full font-medium whitespace-nowrap hover:bg-gray-100 transition"
+                    data-category="พัฒนาตนเอง">
+                    พัฒนาตนเอง & จิตวิทยา
+                </button>
+                <button
+                    class="filter-btn bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full font-medium whitespace-nowrap hover:bg-gray-100 transition"
+                    data-category="Data & AI">
+                    วิทยาศาสตร์ข้อมูล & AI
+                </button>
+                <button
+                    class="filter-btn bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full font-medium whitespace-nowrap hover:bg-gray-100 transition"
+                    data-category="ธุรกิจ & การตลาด">
+                    ธุรกิจ & การตลาด
+                </button>
+                <button
+                    class="filter-btn bg-white border border-gray-200 text-gray-600 px-4 py-2 rounded-full font-medium whitespace-nowrap hover:bg-gray-100 transition"
+                    data-category="Programming">
+                    เทคโนโลยี & การเขียนโปรแกรม
+                </button>
+            </div>
+
+            <!-- การ์ดหนังสือ (Grid Layout) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6" id="bookGrid">
+
+                <!-- เล่มที่ 1 -->
+                <div class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                    data-category="พัฒนาตนเอง" data-price="300" data-title="ถอดรหัสวิญญาณแห่งดวงดาว">
+                    <a href="book-detail.html?id=1" class="h-48 bg-gray-100 overflow-hidden relative block group">
+                        <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400"
+                            alt="ถอดรหัสวิญญาณแห่งดวงดาว" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span
+                            class="absolute top-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">พัฒนาตนเอง</span>
+                    </a>
+                    <div class="p-4 flex flex-col flex-1 justify-between">
+                        <div>
+                            <h3 class="font-bold text-base mb-1 line-clamp-1">
+                                <a href="book-detail.html?id=1" class="hover:text-blue-600 transition">ถอดรหัสวิญญาณแห่งดวงดาว</a>
+                            </h3>
+                            <p class="text-xs text-gray-500 mb-2">โดย กวิน ทัศนีย์</p>
+                            <p class="text-xs text-gray-600 line-clamp-2 mb-4">
+                                การพะวงเรื่องของจิตวิญญาณและการค้นหาความหมายของการยกระดับจิตใจ</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span class="text-lg font-bold text-blue-600">฿300.00</span>
+                            <div class="flex items-center gap-2">
+                                <a href="book-detail.html?id=1" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1.5 font-medium transition">
+                                    ดูรายละเอียด
+                                </a>
+                                <button onclick="addToCart('ถอดรหัสวิญญาณแห่งดวงดาว')"
+                                    class="buy-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">
+                                    🛒 ใส่ตะกร้า
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- เล่มที่ 2 -->
+                <div class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                    data-category="Data & AI" data-price="380" data-title="Data Analytics with SQL & Business">
+                    <a href="book-detail.html?id=2" class="h-48 bg-gray-100 overflow-hidden relative block group">
+                        <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=400"
+                            alt="Data Analytics with SQL & Business" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span
+                            class="absolute top-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">Data
+                            & AI</span>
+                    </a>
+                    <div class="p-4 flex flex-col flex-1 justify-between">
+                        <div>
+                            <h3 class="font-bold text-base mb-1 line-clamp-1">
+                                <a href="book-detail.html?id=2" class="hover:text-blue-600 transition">Data Analytics with SQL & Business</a>
+                            </h3>
+                            <p class="text-xs text-gray-500 mb-2">โดย ดร.สมชาย ปัญญาชัย</p>
+                            <p class="text-xs text-gray-600 line-clamp-2 mb-4">การกรองข้อมูลเชิงลึกด้วยคำสั่ง SQL
+                                วิเคราะห์ธุรกิจเพื่อสร้าง Dashboard อัจฉริยะ</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span class="text-lg font-bold text-blue-600">฿380.00</span>
+                            <div class="flex items-center gap-2">
+                                <a href="book-detail.html?id=2" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1.5 font-medium transition">
+                                    ดูรายละเอียด
+                                </a>
+                                <button onclick="addToCart('Data Analytics with SQL')"
+                                    class="buy-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">
+                                    🛒 ใส่ตะกร้า
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- เล่มที่ 3 -->
+                <div class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                    data-category="ธุรกิจ & การตลาด" data-price="280" data-title="จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป">
+                    <a href="book-detail.html?id=3" class="h-48 bg-gray-100 overflow-hidden relative block group">
+                        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=400"
+                            alt="จิตวิทยาการเจรจาต่อรอง" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span
+                            class="absolute top-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">ธุรกิจ
+                            & การตลาด</span>
+                    </a>
+                    <div class="p-4 flex flex-col flex-1 justify-between">
+                        <div>
+                            <h3 class="font-bold text-base mb-1 line-clamp-1">
+                                <a href="book-detail.html?id=3" class="hover:text-blue-600 transition">จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป</a>
+                            </h3>
+                            <p class="text-xs text-gray-500 mb-2">โดย ศิลป์การสื่อสาร</p>
+                            <p class="text-xs text-gray-600 line-clamp-2 mb-4">ศิลปะการสื่อสารโน้มน้าวใจ
+                                การเจรจาทางธุรกิจและการสร้างความสัมพันธ์ Win-Win</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span class="text-lg font-bold text-blue-600">฿280.00</span>
+                            <div class="flex items-center gap-2">
+                                <a href="book-detail.html?id=3" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1.5 font-medium transition">
+                                    ดูรายละเอียด
+                                </a>
+                                <button onclick="addToCart('จิตวิทยาการเจรจาต่อรอง')"
+                                    class="buy-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">
+                                    🛒 ใส่ตะกร้า
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- เล่มที่ 4 -->
+                <div class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col"
+                    data-category="Programming" data-price="450" data-title="Clean Architecture & Design Patterns">
+                    <a href="book-detail.html?id=4" class="h-48 bg-gray-100 overflow-hidden relative block group">
+                        <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=400"
+                            alt="Clean Architecture" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                        <span
+                            class="absolute top-3 left-3 bg-black/60 text-white text-xs px-2.5 py-1 rounded-full backdrop-blur-sm">Programming</span>
+                    </a>
+                    <div class="p-4 flex flex-col flex-1 justify-between">
+                        <div>
+                            <h3 class="font-bold text-base mb-1 line-clamp-1">
+                                <a href="book-detail.html?id=4" class="hover:text-blue-600 transition">Clean Architecture & Design Patterns</a>
+                            </h3>
+                            <p class="text-xs text-gray-500 mb-2">โดย ทีมวิศวกรซอฟต์แวร์</p>
+                            <p class="text-xs text-gray-600 line-clamp-2 mb-4">
+                                กระบวนการออกแบบสถาปัตยกรรมระบบซอฟต์แวร์ให้ยั่งยืน ดูแลรักษาง่าย</p>
+                        </div>
+                        <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                            <span class="text-lg font-bold text-blue-600">฿450.00</span>
+                            <div class="flex items-center gap-2">
+                                <a href="book-detail.html?id=4" class="text-xs text-gray-500 hover:text-blue-600 px-2 py-1.5 font-medium transition">
+                                    ดูรายละเอียด
+                                </a>
+                                <button onclick="addToCart('Clean Architecture')"
+                                    class="buy-btn bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer">
+                                    🛒 ใส่ตะกร้า
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- 4. ส่วนท้ายเว็บ (Footer) พร้อมลิงก์นำทางครบทุกหน้า -->
+    <footer class="bg-white border-t border-gray-200 py-8 text-center text-sm text-gray-500 mt-12">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="flex flex-wrap justify-center items-center gap-6 mb-4 font-medium text-gray-600">
+                <a href="index.html" class="hover:text-blue-600 transition">🏠 หน้าแรก</a>
+                <a href="#bookSection" class="hover:text-blue-600 transition">📖 รายการหนังสือ</a>
+                <a href="cart.html" class="hover:text-blue-600 transition">🛒 ตะกร้าสินค้า</a>
+                <a href="my-books.html" class="hover:text-blue-600 transition">📚 หนังสือของฉัน</a>
+                <a href="checkout.html" class="hover:text-blue-600 transition">💳 ชำระเงิน</a>
+                <a href="admin.html" class="text-red-600 hover:text-red-700 transition font-semibold">⚙️ จัดการระบบ
+                    (Admin)</a>
+            </div>
+            <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <!-- จาวาสคริปต์ควบคุมการทำงานของหน้าเว็บ -->
+    <script>
+        let cartCount = 0;
+
+        // ฟังก์ชันกดปุ่มใส่ตะกร้า
+        function addToCart(bookName) {
+            cartCount++;
+            document.getElementById('cartCount').innerText = cartCount;
+            alert(`✅ เพิ่มหนังสือ "${bookName}" ลงในตะกร้าเรียบร้อยแล้ว!\nคลิกที่ปุ่ม "🛒 ตะกร้า" ด้านบนเพื่อดูรายการสินค้าและดำเนินการสั่งซื้อได้เลย`);
+        }
+
+        // ฟังก์ชันเลื่อนหน้าจอไปที่ส่วนหนังสือ
+        function scrollToBooks() {
+            document.getElementById('bookSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ระบบค้นหาหนังสือแบบ Real-time
+        const searchInput = document.getElementById('searchInput');
+        const bookCards = document.querySelectorAll('.book-card');
+
+        searchInput.addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            bookCards.forEach(card => {
+                const title = card.getAttribute('data-title').toLowerCase();
+                if (title.includes(term)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+
+        // ระบบกรองหมวดหมู่ (Category Filtering)
+        const filterButtons = document.querySelectorAll('.filter-btn');
+
+        filterButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                // เปลี่ยนสไตล์ปุ่มที่เลือก
+                filterButtons.forEach(b => {
+                    b.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+                    b.classList.add('bg-white', 'border', 'border-gray-200', 'text-gray-600');
+                });
+                btn.classList.remove('bg-white', 'border', 'border-gray-200', 'text-gray-600');
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+
+                const selectedCategory = btn.getAttribute('data-category');
+
+                bookCards.forEach(card => {
+                    const cardCategory = card.getAttribute('data-category');
+                    if (selectedCategory === 'all' || cardCategory === selectedCategory) {
+                        card.style.display = 'flex';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

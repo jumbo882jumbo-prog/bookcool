@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - ระบบบริหารจัดการร้าน E-Book</title>
+    <!-- โหลด Tailwind CSS จาก CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Prompt จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col justify-between">
+
+    <!-- 1. แถบนำทางด้านบน Navbar หลังบ้าน -->
+    <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="bg-red-600 text-white px-2.5 py-1 rounded font-bold text-xs">ADMIN</span>
+                <span class="font-bold text-lg">E-Book Store Management</span>
+            </div>
+            
+            <!-- เมนูระบบหลังบ้าน -->
+            <div class="flex items-center space-x-2 sm:space-x-3 text-sm">
+                <!-- เมนู 1: จัดการคำสั่งซื้อ (Active) -->
+                <a href="admin.html"
+                    class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition flex items-center gap-1.5">
+                    📋 <span>จัดการคำสั่งซื้อ</span>
+                </a>
+
+                <!-- เมนู 2: รายงานวิเคราะห์ (เชื่อมโยงไป reports.html) -->
+                <a href="reports.html"
+                    class="text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition flex items-center gap-1.5 font-medium">
+                    📊 <span>รายงานวิเคราะห์</span>
+                </a>
+
+                <!-- เมนู 3: ไปที่หน้าร้าน -->
+                <a href="index.html"
+                    class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 transition flex items-center gap-1.5">
+                    🌐 <span class="hidden sm:inline">หน้าร้านค้า</span>
+                </a>
+
+                <div class="flex items-center space-x-2 border-l border-gray-700 pl-3 sm:pl-4">
+                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">
+                        พล
+                    </div>
+                    <span class="hidden lg:inline text-xs text-gray-300">พลอยแสง (Admin)</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. เนื้อหาหลักหลังบ้าน -->
+    <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow">
+
+        <!-- หัวข้อหลัก -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+                <h1 class="text-2xl font-bold">📊 ระบบบริหารจัดการคำสั่งซื้อ (Orders Management)</h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    ตรวจสอบหลักฐานการชำระเงินจำลองและเปลี่ยนสถานะคำสั่งซื้อเพื่อเปิดสิทธิ์ดาวน์โหลด
+                </p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="reports.html"
+                    class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 px-3.5 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    📊 <span>ดูรายงานวิเคราะห์</span>
+                </a>
+                <a href="index.html" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3.5 py-2 rounded-xl text-sm font-semibold transition">
+                    ← หน้าเว็บลูกค้า
+                </a>
+                <a href="add-book.html"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition shadow-sm cursor-pointer flex items-center gap-1.5">
+                    + <span>เพิ่ม E-Book เล่มใหม่</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- สรุปตัวเลขสถิติ (Mini Dashboard Cards) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <p class="text-xs text-gray-500 font-medium">ยอดขายรวมทั้งหมด</p>
+                <h3 class="text-2xl font-bold text-blue-600 mt-1">฿12,450.00</h3>
+                <span class="text-xs text-green-600 mt-2 inline-block">↑ เพิ่มขึ้นจากเดือนก่อน</span>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <p class="text-xs text-gray-500 font-medium">คำสั่งซื้อทั้งหมด</p>
+                <h3 class="text-2xl font-bold text-gray-800 mt-1">30 รายการ</h3>
+                <span class="text-xs text-gray-500 mt-2 inline-block">ครบตามเป้าหมายโปรเจกต์</span>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <p class="text-xs text-gray-500 font-medium">รอการยืนยันชำระเงิน</p>
+                <h3 class="text-2xl font-bold text-amber-600 mt-1">3 รายการ</h3>
+                <span class="text-xs text-amber-600 mt-2 inline-block font-semibold">⚠️ ต้องตรวจสอบสลิป</span>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200">
+                <p class="text-xs text-gray-500 font-medium">จำนวน E-Book ในระบบ</p>
+                <h3 class="text-2xl font-bold text-indigo-600 mt-1">12 เล่ม</h3>
+                <span class="text-xs text-indigo-600 mt-2 inline-block">พร้อมจำหน่าย</span>
+            </div>
+        </div>
+
+        <!-- ตารางจัดการคำสั่งซื้อ (Order Table) -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h2 class="font-bold text-lg">รายการคำสั่งซื้อล่าสุด</h2>
+                <input type="text" id="orderSearch" placeholder="ค้นหา Order ID หรือชื่อลูกค้า..."
+                    class="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64">
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-sm">
+                    <thead>
+                        <tr class="bg-gray-50 text-gray-500 border-b border-gray-200">
+                            <th class="p-4 font-semibold">Order ID</th>
+                            <th class="p-4 font-semibold">ลูกค้า</th>
+                            <th class="p-4 font-semibold">รายการหนังสือ</th>
+                            <th class="p-4 font-semibold">ยอดชำระ</th>
+                            <th class="p-4 font-semibold">สถานะคำสั่งซื้อ</th>
+                            <th class="p-4 font-semibold text-center">จัดการ / เปลี่ยนสถานะ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100" id="orderTableBody">
+                        <!-- แถวที่ 1: รอยืนยัน -->
+                        <tr id="row-ORD-2026-001">
+                            <td class="p-4 font-medium text-blue-600">#ORD-2026-001</td>
+                            <td class="p-4">สมชาย ใจดี</td>
+                            <td class="p-4">Data Analytics with SQL (1 เล่ม)</td>
+                            <td class="p-4 font-semibold">฿380.00</td>
+                            <td class="p-4">
+                                <span id="status-ORD-2026-001" class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                    ⏳ รอชำระ/ตรวจสอบ
+                                </span>
+                            </td>
+                            <td class="p-4 text-center">
+                                <button onclick="confirmOrder('ORD-2026-001')" id="btn-ORD-2026-001"
+                                    class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition cursor-pointer">
+                                    ✅ ยืนยันคำสั่งซื้อ
+                                </button>
+                            </td>
+                        </tr>
+                        <!-- แถวที่ 2: ยืนยันแล้ว -->
+                        <tr id="row-ORD-2026-002">
+                            <td class="p-4 font-medium text-blue-600">#ORD-2026-002</td>
+                            <td class="p-4">กัญญา 3D</td>
+                            <td class="p-4">Clean Architecture (1 เล่ม)</td>
+                            <td class="p-4 font-semibold">฿450.00</td>
+                            <td class="p-4">
+                                <span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                    ✅ ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)
+                                </span>
+                            </td>
+                            <td class="p-4 text-center">
+                                <span class="text-xs text-gray-400">ดำเนินการแล้ว</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 3. ส่วนท้ายเว็บ (Footer) -->
+    <footer class="bg-white border-t border-gray-200 py-6 text-center text-sm text-gray-500 mt-12">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>© 2026 E-Book Store Management Portal. All rights reserved.</p>
+            <div class="flex items-center space-x-4 text-xs">
+                <a href="admin.html" class="text-blue-600 font-semibold underline">จัดการคำสั่งซื้อ</a>
+                <a href="reports.html" class="text-blue-600 hover:underline">รายงานวิเคราะห์</a>
+                <a href="index.html" class="text-gray-500 hover:text-gray-700">หน้าร้านค้า</a>
+                <a href="my-books.html" class="text-gray-500 hover:text-gray-700">หนังสือของฉัน</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- จาวาสคริปต์จำลองการกดอนุมัติ -->
+    <script>
+        function confirmOrder(orderId) {
+            const statusEl = document.getElementById(`status-${orderId}`);
+            const btnEl = document.getElementById(`btn-${orderId}`);
+            
+            if (statusEl) {
+                statusEl.className = "bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium";
+                statusEl.innerText = "✅ ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)";
+            }
+            if (btnEl) {
+                btnEl.parentElement.innerHTML = '<span class="text-xs text-gray-400">ดำเนินการแล้ว</span>';
+            }
+
+            alert(`✅ ยืนยันคำสั่งซื้อ #${orderId} สำเร็จ!\nระบบได้เปลี่ยนสถานะเป็น "ยืนยันแล้ว" และสร้างสิทธิ์ดาวน์โหลดให้ลูกค้าเรียบร้อยแล้ว`);
+        }
+    </script>
+</body>
+
+</html>
