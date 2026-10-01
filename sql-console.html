@@ -102,11 +102,66 @@
             </div>
         </div>
 
+        <!-- แถบปุ่มคำสั่ง SQL สำหรับ 4 รายงานวิเคราะห์หลัก (เหมือนหน้ารายงาน Analytics) -->
+        <div class="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-2xl p-5 shadow-sm border border-blue-200 mb-6">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                        📊 <span>คำสั่ง SQL 4 มิติวิเคราะห์ (ตรงกับหน้ารายงาน Analytics):</span>
+                    </span>
+                    <span class="text-[11px] bg-blue-600 text-white font-semibold px-2 py-0.5 rounded-full">4 รายงานหลัก</span>
+                </div>
+                <span class="text-xs text-blue-700 font-medium">⚡ คลิกเพื่อใส่คำสั่ง SQL และรันผลลัพธ์ทันที</span>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <!-- รายงานที่ 1 -->
+                <button onclick="loadReportQuery(1)"
+                    class="bg-white hover:bg-blue-600 text-gray-800 hover:text-white border border-blue-200 hover:border-blue-600 p-3 rounded-xl transition text-left shadow-xs group cursor-pointer flex items-start gap-2.5">
+                    <span class="text-xl group-hover:scale-110 transition flex-shrink-0">📅</span>
+                    <div>
+                        <div class="font-bold text-xs text-gray-900 group-hover:text-white">1. ยอดขายตามช่วงเวลา</div>
+                        <div class="text-[11px] text-gray-500 group-hover:text-blue-100 mt-0.5 font-mono">GROUP BY DATE + SUM/AVG</div>
+                    </div>
+                </button>
+
+                <!-- รายงานที่ 2 -->
+                <button onclick="loadReportQuery(2)"
+                    class="bg-white hover:bg-amber-600 text-gray-800 hover:text-white border border-amber-200 hover:border-amber-600 p-3 rounded-xl transition text-left shadow-xs group cursor-pointer flex items-start gap-2.5">
+                    <span class="text-xl group-hover:scale-110 transition flex-shrink-0">🏆</span>
+                    <div>
+                        <div class="font-bold text-xs text-gray-900 group-hover:text-white">2. E-Book ขายดีอันดับ 1-10</div>
+                        <div class="text-[11px] text-gray-500 group-hover:text-amber-100 mt-0.5 font-mono">GROUP BY book + ORDER BY QTY</div>
+                    </div>
+                </button>
+
+                <!-- รายงานที่ 3 -->
+                <button onclick="loadReportQuery(3)"
+                    class="bg-white hover:bg-emerald-600 text-gray-800 hover:text-white border border-emerald-200 hover:border-emerald-600 p-3 rounded-xl transition text-left shadow-xs group cursor-pointer flex items-start gap-2.5">
+                    <span class="text-xl group-hover:scale-110 transition flex-shrink-0">📂</span>
+                    <div>
+                        <div class="font-bold text-xs text-gray-900 group-hover:text-white">3. ยอดขายตามหมวดหมู่</div>
+                        <div class="text-[11px] text-gray-500 group-hover:text-emerald-100 mt-0.5 font-mono">JOIN + GROUP BY category</div>
+                    </div>
+                </button>
+
+                <!-- รายงานที่ 4 -->
+                <button onclick="loadReportQuery(4)"
+                    class="bg-white hover:bg-purple-600 text-gray-800 hover:text-white border border-purple-200 hover:border-purple-600 p-3 rounded-xl transition text-left shadow-xs group cursor-pointer flex items-start gap-2.5">
+                    <span class="text-xl group-hover:scale-110 transition flex-shrink-0">👥</span>
+                    <div>
+                        <div class="font-bold text-xs text-gray-900 group-hover:text-white">4. ลูกค้าและคำสั่งซื้อ</div>
+                        <div class="text-[11px] text-gray-500 group-hover:text-purple-100 mt-0.5 font-mono">GROUP BY user + SUM spent</div>
+                    </div>
+                </button>
+            </div>
+        </div>
+
         <!-- แถบปุ่มคำสั่ง SQL ตัวอย่าง (Preset Quick Queries) -->
         <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 mb-6">
             <div class="flex items-center justify-between mb-2">
                 <span class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                    ⚡ <span>คำสั่ง SQL ตัวอย่างยอดนิยม (คลิกเพื่อใส่คำสั่งทันที):</span>
+                    ⚡ <span>คำสั่ง SQL ตัวอย่างทั่วไป:</span>
                 </span>
                 <span class="text-[11px] text-gray-400 hidden sm:inline">กดรันด้วยปุ่มด้านล่าง หรือกด Ctrl + Enter</span>
             </div>
@@ -204,7 +259,7 @@
                             <div>• order_id <span class="text-gray-400">(VARCHAR, PK)</span></div>
                             <div>• customer_name <span class="text-gray-400">(VARCHAR)</span></div>
                             <div>• customer_email <span class="text-gray-400">(VARCHAR)</span></div>
-                            <div>• total <span class="text-gray-400">(DECIMAL)</span></div>
+                            <div>• total / total_amount <span class="text-gray-400">(DECIMAL)</span></div>
                             <div>• status <span class="text-gray-400">(VARCHAR)</span></div>
                             <div>• order_date <span class="text-gray-400">(DATETIME)</span></div>
                         </div>
@@ -464,6 +519,7 @@
                         customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
                         customer_email: String(o.customerEmail || 'user@bookcool.com'),
                         total: parseFloat(o.total) || 0.00,
+                        total_amount: parseFloat(o.total) || 0.00,
                         status: String(o.status || 'pending'),
                         order_date: String(o.date || '2026-10-01 12:00')
                     });
@@ -559,7 +615,60 @@
             }
         }
 
-        // ฟังก์ชันเลือกคำสั่งด่วนจากตัวอย่าง
+        // ฟังก์ชันเลือกคำสั่งด่วนสำหรับ 4 รายงานวิเคราะห์หลัก
+        const reportQueries = {
+            1: `-- 1. รายงานยอดขายตามช่วงเวลา (Sales over Time)
+SELECT 
+    SUBSTRING(order_date, 1, 10) AS sale_date,
+    COUNT(order_id) AS total_orders,
+    SUM(total_amount) AS total_sales,
+    ROUND(AVG(total_amount), 2) AS avg_aov
+FROM orders
+GROUP BY SUBSTRING(order_date, 1, 10)
+ORDER BY sale_date DESC;`,
+
+            2: `-- 2. รายงาน E-Book ขายดีอันดับ 1-10 (Top Selling E-Books)
+SELECT 
+    book_title,
+    SUM(quantity) AS total_sold_qty,
+    SUM(price * quantity) AS total_revenue,
+    COUNT(DISTINCT order_id) AS orders_count
+FROM order_items
+GROUP BY book_title
+ORDER BY total_sold_qty DESC;`,
+
+            3: `-- 3. รายงานยอดขายตามหมวดหมู่ (Sales by Category)
+SELECT 
+    b.category_name,
+    COUNT(DISTINCT i.order_id) AS total_orders,
+    SUM(i.quantity) AS books_sold_qty,
+    SUM(i.price * i.quantity) AS category_revenue
+FROM order_items i
+JOIN ebooks b ON i.ebook_id = b.ebook_id
+GROUP BY b.category_name
+ORDER BY category_revenue DESC;`,
+
+            4: `-- 4. รายงานลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)
+SELECT 
+    customer_name,
+    customer_email,
+    COUNT(order_id) AS total_orders,
+    SUM(total_amount) AS total_spent,
+    MAX(order_date) AS latest_order_date
+FROM orders
+GROUP BY customer_name, customer_email
+ORDER BY total_spent DESC;`
+        };
+
+        function loadReportQuery(num) {
+            if (reportQueries[num]) {
+                const editor = document.getElementById('sqlInput');
+                editor.value = reportQueries[num];
+                executeSQL();
+            }
+        }
+
+        // ฟังก์ชันเลือกคำสั่งด่วนจากตัวอย่างทั่วไป
         function loadPreset(sql) {
             const editor = document.getElementById('sqlInput');
             editor.value = sql;
@@ -607,11 +716,17 @@
             try {
                 let results = null;
 
+                // แก้ไขกรณีที่พิมพ์ SUM(total) หรือ AVG(total) เพื่อหลบ keyword ของ AlaSQL
+                let queryToRun = rawSql
+                    .replace(/\bSUM\(\s*total\s*\)/gi, 'SUM(total_amount)')
+                    .replace(/\bAVG\(\s*total\s*\)/gi, 'AVG(total_amount)')
+                    .replace(/\bCOUNT\(\s*total\s*\)/gi, 'COUNT(total_amount)');
+
                 if (window.alasql) {
-                    results = alasql(rawSql);
+                    results = alasql(queryToRun);
                 } else {
                     // Fallback กรณีที่ CDN AlaSQL โหลดไม่ได้
-                    results = executeFallbackSQL(rawSql);
+                    results = executeFallbackSQL(queryToRun);
                 }
 
                 const endTime = performance.now();

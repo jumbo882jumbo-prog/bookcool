@@ -76,12 +76,16 @@
                     <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md">
                         Business Intelligence & SQL Analytics
                     </span>
+                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md shadow-2xs">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        ⚡ เรียลไทม์ (Live Real-Time Data)
+                    </span>
                 </div>
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mt-1">
                     📈 รายงานวิเคราะห์ข้อมูลและสถิติการขาย
                 </h1>
                 <p class="text-sm text-gray-500 mt-1">
-                    รวบรวมรายงานยอดขาย, หนังสือขายดี, สัดส่วนหมวดหมู่ และพฤติกรรมลูกค้าตามหลักการวิเคราะห์ข้อมูล SQL
+                    รวบรวมรายงานยอดขาย, หนังสือขายดี, สัดส่วนหมวดหมู่ และพฤติกรรมลูกค้าตามหลักการวิเคราะห์ข้อมูล SQL (อัปเดตเรียลไทม์)
                 </p>
             </div>
 
@@ -91,9 +95,7 @@
                     <span class="text-gray-400 mr-2">📅 ช่วงเวลา:</span>
                     <select id="dateFilter" onchange="filterData()"
                         class="bg-transparent font-medium text-gray-700 focus:outline-none cursor-pointer">
-                        <option value="this-month">เดือนนี้ (ตุลาคม 2026)</option>
-                        <option value="last-month">เดือนที่แล้ว (กันยายน 2026)</option>
-                        <option value="all-time" selected>ข้อมูลทั้งหมด (All Time)</option>
+                        <option value="all-time" selected>ข้อมูลทั้งหมด (All Time - เรียลไทม์)</option>
                     </select>
                 </div>
                 <button onclick="exportReport()"
@@ -107,7 +109,7 @@
             </div>
         </div>
 
-        <!-- การ์ดสรุปตัวเลขภาพรวม (Overview KPI Cards) -->
+        <!-- การ์ดสรุปตัวเลขภาพรวม (Overview KPI Cards - Real Time) -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
             <!-- ยอดขายรวม -->
             <div class="bg-white p-5 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
@@ -115,12 +117,12 @@
                     <span>ยอดขายรวมสุทธิ (Total Revenue)</span>
                     <span class="bg-blue-50 text-blue-600 p-1.5 rounded-lg">💰</span>
                 </div>
-                <div class="text-2xl font-bold text-blue-600">฿12,450.00</div>
+                <div class="text-2xl font-bold text-blue-600" id="kpiRevenue">฿0.00</div>
                 <div class="mt-2 text-xs text-green-600 flex items-center gap-1">
-                    <span>↑ 18.5%</span> <span class="text-gray-400">เทียบกับเดือนก่อนหน้า</span>
+                    <span id="kpiRevenueSub">คำนวณจากคำสั่งซื้อจริง</span>
                 </div>
                 <div class="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-400 font-mono">
-                    SQL: SUM(total_amount)
+                    SQL: SUM(total)
                 </div>
             </div>
 
@@ -130,9 +132,9 @@
                     <span>จำนวนคำสั่งซื้อทั้งหมด (Total Orders)</span>
                     <span class="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">🛒</span>
                 </div>
-                <div class="text-2xl font-bold text-emerald-600">30 รายการ</div>
-                <div class="mt-2 text-xs text-emerald-600 flex items-center gap-1">
-                    <span>✓ ชำระแล้ว 27</span> <span class="text-amber-500">• รอตรวจสอบ 3</span>
+                <div class="text-2xl font-bold text-emerald-600" id="kpiOrders">0 รายการ</div>
+                <div class="mt-2 text-xs text-emerald-600 flex items-center gap-1" id="kpiOrdersStatus">
+                    <span>✓ ชำระแล้ว 0</span> <span class="text-amber-500">• รอตรวจสอบ 0</span>
                 </div>
                 <div class="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-400 font-mono">
                     SQL: COUNT(order_id)
@@ -145,12 +147,12 @@
                     <span>เฉลี่ยต่อคำสั่งซื้อ (AOV)</span>
                     <span class="bg-indigo-50 text-indigo-600 p-1.5 rounded-lg">📊</span>
                 </div>
-                <div class="text-2xl font-bold text-indigo-600">฿415.00</div>
-                <div class="mt-2 text-xs text-gray-500 flex items-center gap-1">
-                    <span>เฉลี่ย 1.3 เล่มต่อคำสั่งซื้อ</span>
+                <div class="text-2xl font-bold text-indigo-600" id="kpiAOV">฿0.00</div>
+                <div class="mt-2 text-xs text-gray-500 flex items-center gap-1" id="kpiAOVSub">
+                    <span>เฉลี่ยต่อคำสั่งซื้อ</span>
                 </div>
                 <div class="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-400 font-mono">
-                    SQL: AVG(total_amount)
+                    SQL: AVG(total)
                 </div>
             </div>
 
@@ -160,12 +162,12 @@
                     <span>ลูกค้าทั้งหมดที่มียอดซื้อ</span>
                     <span class="bg-purple-50 text-purple-600 p-1.5 rounded-lg">👥</span>
                 </div>
-                <div class="text-2xl font-bold text-purple-600">22 บัญชี</div>
-                <div class="mt-2 text-xs text-purple-600 flex items-center gap-1">
-                    <span>⭐ ลูกค้าซื้อซ้ำ 8 บัญชี (36%)</span>
+                <div class="text-2xl font-bold text-purple-600" id="kpiCustomers">0 บัญชี</div>
+                <div class="mt-2 text-xs text-purple-600 flex items-center gap-1" id="kpiCustomersSub">
+                    <span>⭐ ลูกค้าที่สั่งซื้อ</span>
                 </div>
                 <div class="mt-2 pt-2 border-t border-gray-100 text-[11px] text-gray-400 font-mono">
-                    SQL: COUNT(DISTINCT user_id)
+                    SQL: COUNT(DISTINCT customer_email)
                 </div>
             </div>
         </div>
@@ -264,83 +266,11 @@
                             <th class="p-3.5 font-semibold text-center">สถานะเป้าหมาย</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm">
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">01 ต.ค. 2026 (วันนี้)</td>
-                            <td class="p-3.5 text-center font-semibold">4 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">5 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿1,430.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿357.50</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">ตามเป้าหมาย</span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">30 ก.ย. 2026</td>
-                            <td class="p-3.5 text-center font-semibold">6 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">8 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿2,250.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿375.00</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">ตามเป้าหมาย</span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">29 ก.ย. 2026</td>
-                            <td class="p-3.5 text-center font-semibold">3 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">3 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿1,060.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿353.33</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-slate-100 text-slate-600 text-xs px-2.5 py-0.5 rounded-full font-medium">ปานกลาง</span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">28 ก.ย. 2026</td>
-                            <td class="p-3.5 text-center font-semibold">5 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">7 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿2,180.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿436.00</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">ตามเป้าหมาย</span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">27 ก.ย. 2026</td>
-                            <td class="p-3.5 text-center font-semibold">5 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">6 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿2,640.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿528.00</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">ยอดเยี่ยม</span>
-                            </td>
-                        </tr>
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">26 ก.ย. 2026</td>
-                            <td class="p-3.5 text-center font-semibold">7 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">9 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿2,890.00</td>
-                            <td class="p-3.5 text-right text-gray-600">฿412.85</td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">ยอดเยี่ยม</span>
-                            </td>
-                        </tr>
+                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm" id="tableSalesByDate">
+                        <!-- ข้อมูลยอดขายตามช่วงเวลาโหลดแบบเรียลไทม์ -->
                     </tbody>
-                    <tfoot>
-                        <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
-                            <td class="p-3.5">รวมผลประกอบการสะสม</td>
-                            <td class="p-3.5 text-center text-blue-600">30 คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center text-blue-600">38 เล่ม</td>
-                            <td class="p-3.5 text-right text-blue-700 font-bold">฿12,450.00</td>
-                            <td class="p-3.5 text-right text-blue-700">฿415.00</td>
-                            <td class="p-3.5 text-center text-emerald-600">สำเร็จ 100%</td>
-                        </tr>
+                    <tfoot id="footSalesByDate">
+                        <!-- สรุปผลประกอบการโหลดแบบเรียลไทม์ -->
                     </tfoot>
                 </table>
             </div>
@@ -386,145 +316,8 @@
                             <th class="p-3.5 font-semibold w-40">สัดส่วนยอดขาย</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm">
-                        <!-- อันดับ 1 -->
-                        <tr class="hover:bg-amber-50/40 transition">
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="w-8 h-8 rounded-full bg-amber-100 text-amber-700 font-bold inline-flex items-center justify-center text-sm shadow-sm">
-                                    🥇 1
-                                </span>
-                            </td>
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-3">
-                                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=120"
-                                        alt="Data Analytics" class="w-10 h-14 object-cover rounded shadow-sm">
-                                    <div>
-                                        <div class="font-bold text-gray-900">Data Analytics with SQL & Business</div>
-                                        <div class="text-xs text-gray-500">ดร.สมชาย ปัญญาชัย</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5">
-                                <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    Data & AI
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-right font-medium text-gray-700">฿380.00</td>
-                            <td class="p-3.5 text-center font-bold text-amber-600 text-base">14 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿5,320.00</td>
-                            <td class="p-3.5">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-amber-500 h-2.5 rounded-full" style="width: 42.7%"></div>
-                                </div>
-                                <span class="text-[11px] text-gray-500 mt-1 block">42.7% ของยอดรวม</span>
-                            </td>
-                        </tr>
-
-                        <!-- อันดับ 2 -->
-                        <tr class="hover:bg-slate-50/70 transition">
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold inline-flex items-center justify-center text-sm shadow-sm">
-                                    🥈 2
-                                </span>
-                            </td>
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-3">
-                                    <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=120"
-                                        alt="Clean Architecture" class="w-10 h-14 object-cover rounded shadow-sm">
-                                    <div>
-                                        <div class="font-bold text-gray-900">Clean Architecture & Design Patterns</div>
-                                        <div class="text-xs text-gray-500">ทีมวิศวกรซอฟต์แวร์</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5">
-                                <span
-                                    class="bg-purple-100 text-purple-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    Programming
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-right font-medium text-gray-700">฿450.00</td>
-                            <td class="p-3.5 text-center font-bold text-slate-700 text-base">8 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿3,600.00</td>
-                            <td class="p-3.5">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-purple-600 h-2.5 rounded-full" style="width: 28.9%"></div>
-                                </div>
-                                <span class="text-[11px] text-gray-500 mt-1 block">28.9% ของยอดรวม</span>
-                            </td>
-                        </tr>
-
-                        <!-- อันดับ 3 -->
-                        <tr class="hover:bg-amber-50/20 transition">
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="w-8 h-8 rounded-full bg-amber-50 text-amber-800 font-bold inline-flex items-center justify-center text-sm shadow-sm border border-amber-200">
-                                    🥉 3
-                                </span>
-                            </td>
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-3">
-                                    <img src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=120"
-                                        alt="Lean Startup & Product Strategy" class="w-10 h-14 object-cover rounded shadow-sm">
-                                    <div>
-                                        <div class="font-bold text-gray-900">Lean Startup & Product Strategy</div>
-                                        <div class="text-xs text-gray-500">ณัฐพร นวัตกรรม</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5">
-                                <span
-                                    class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    ธุรกิจ & การตลาด
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-right font-medium text-gray-700">฿320.00</td>
-                            <td class="p-3.5 text-center font-bold text-slate-700 text-base">9 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿2,700.00</td>
-                            <td class="p-3.5">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-emerald-500 h-2.5 rounded-full" style="width: 21.7%"></div>
-                                </div>
-                                <span class="text-[11px] text-gray-500 mt-1 block">21.7% ของยอดรวม</span>
-                            </td>
-                        </tr>
-
-                        <!-- อันดับ 4 -->
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="w-8 h-8 rounded-full bg-gray-100 text-gray-600 font-bold inline-flex items-center justify-center text-xs">
-                                    4
-                                </span>
-                            </td>
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-3">
-                                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=120"
-                                        alt="จิตวิทยาการเจรจาต่อรอง" class="w-10 h-14 object-cover rounded shadow-sm">
-                                    <div>
-                                        <div class="font-bold text-gray-900">จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป</div>
-                                        <div class="text-xs text-gray-500">ศิลป์การสื่อสาร</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5">
-                                <span
-                                    class="bg-orange-100 text-orange-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    ธุรกิจ & การตลาด
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-right font-medium text-gray-700">฿280.00</td>
-                            <td class="p-3.5 text-center font-bold text-slate-700 text-base">3 เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿840.00</td>
-                            <td class="p-3.5">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-orange-500 h-2.5 rounded-full" style="width: 6.7%"></div>
-                                </div>
-                                <span class="text-[11px] text-gray-500 mt-1 block">6.7% ของยอดรวม</span>
-                            </td>
-                        </tr>
+                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm" id="tableTopBooks">
+                        <!-- ข้อมูลหนังสือขายดีโหลดแบบเรียลไทม์ -->
                     </tbody>
                 </table>
             </div>
@@ -579,56 +372,11 @@
                                 <th class="p-3 font-semibold text-right">สัดส่วนเปอร์เซ็นต์</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-100 text-xs sm:text-sm">
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
-                                    <span class="w-3 h-3 rounded-full bg-blue-500"></span>
-                                    วิทยาศาสตร์ข้อมูล & AI (Data & AI)
-                                </td>
-                                <td class="p-3 text-center text-gray-500">3 เล่ม</td>
-                                <td class="p-3 text-center font-bold text-gray-800">14 เล่ม</td>
-                                <td class="p-3 text-right font-bold text-blue-600">฿5,320.00</td>
-                                <td class="p-3 text-right font-semibold text-blue-600">42.7%</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
-                                    <span class="w-3 h-3 rounded-full bg-purple-500"></span>
-                                    เทคโนโลยี & การเขียนโปรแกรม (Programming)
-                                </td>
-                                <td class="p-3 text-center text-gray-500">4 เล่ม</td>
-                                <td class="p-3 text-center font-bold text-gray-800">8 เล่ม</td>
-                                <td class="p-3 text-right font-bold text-blue-600">฿3,600.00</td>
-                                <td class="p-3 text-right font-semibold text-purple-600">28.9%</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
-                                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span>
-                                    พัฒนาตนเอง & จิตวิทยา (Self-Development)
-                                </td>
-                                <td class="p-3 text-center text-gray-500">3 เล่ม</td>
-                                <td class="p-3 text-center font-bold text-gray-800">9 เล่ม</td>
-                                <td class="p-3 text-right font-bold text-blue-600">฿2,700.00</td>
-                                <td class="p-3 text-right font-semibold text-emerald-600">21.7%</td>
-                            </tr>
-                            <tr class="hover:bg-slate-50 transition">
-                                <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
-                                    <span class="w-3 h-3 rounded-full bg-amber-500"></span>
-                                    ธุรกิจ & การตลาด (Business & Marketing)
-                                </td>
-                                <td class="p-3 text-center text-gray-500">2 เล่ม</td>
-                                <td class="p-3 text-center font-bold text-gray-800">3 เล่ม</td>
-                                <td class="p-3 text-right font-bold text-blue-600">฿840.00</td>
-                                <td class="p-3 text-right font-semibold text-amber-600">6.7%</td>
-                            </tr>
+                        <tbody class="divide-y divide-gray-100 text-xs sm:text-sm" id="tableCategories">
+                            <!-- ข้อมูลสัดส่วนหมวดหมู่โหลดแบบเรียลไทม์ -->
                         </tbody>
-                        <tfoot>
-                            <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
-                                <td class="p-3">รวม 4 หมวดหมู่</td>
-                                <td class="p-3 text-center">12 เล่ม</td>
-                                <td class="p-3 text-center text-blue-600">34 เล่ม</td>
-                                <td class="p-3 text-right text-blue-700">฿12,450.00</td>
-                                <td class="p-3 text-right text-emerald-600">100.0%</td>
-                            </tr>
+                        <tfoot id="footCategories">
+                            <!-- สรุปผลรวมหมวดหมู่แบบเรียลไทม์ -->
                         </tfoot>
                     </table>
                 </div>
@@ -675,125 +423,8 @@
                             <th class="p-3.5 font-semibold text-center">วันที่ซื้อล่าสุด</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm">
-                        <!-- ลูกค้า 1 -->
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-2.5">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
-                                        กญ
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-gray-900">กัญญา 3D</div>
-                                        <div class="text-xs text-gray-400">kanya.3d@email.com</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-200">
-                                    👑 VIP Gold
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-center font-bold text-gray-900">4 ครั้ง</td>
-                            <td class="p-3.5 text-center">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ
-                                    4</span>
-                            </td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿1,890.00</td>
-                            <td class="p-3.5 text-center text-gray-500">30 ก.ย. 2026</td>
-                        </tr>
-
-                        <!-- ลูกค้า 2 -->
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-2.5">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
-                                        สช
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-gray-900">สมชาย ใจดี</div>
-                                        <div class="text-xs text-gray-400">somchai.jai@email.com</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-200">
-                                    🥈 VIP Silver
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-center font-bold text-gray-900">3 ครั้ง</td>
-                            <td class="p-3.5 text-center space-x-1">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ
-                                    2</span>
-                                <span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป
-                                    1</span>
-                            </td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿1,130.00</td>
-                            <td class="p-3.5 text-center text-gray-500">01 ต.ค. 2026</td>
-                        </tr>
-
-                        <!-- ลูกค้า 3 -->
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-2.5">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs">
-                                        นภ
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-gray-900">นภัสสร รักษ์ดี</div>
-                                        <div class="text-xs text-gray-400">napatsorn@email.com</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5 text-center">
-                                <span
-                                    class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-200">
-                                    🥈 VIP Silver
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-center font-bold text-gray-900">2 ครั้ง</td>
-                            <td class="p-3.5 text-center">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ
-                                    2</span>
-                            </td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿900.00</td>
-                            <td class="p-3.5 text-center text-gray-500">28 ก.ย. 2026</td>
-                        </tr>
-
-                        <!-- ลูกค้า 4 -->
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-2.5">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs">
-                                        ธน
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-gray-900">ธนกร วิทยากร</div>
-                                        <div class="text-xs text-gray-400">thanakorn.dev@email.com</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5 text-center">
-                                <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    Member
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-center font-bold text-gray-900">2 ครั้ง</td>
-                            <td class="p-3.5 text-center space-x-1">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ
-                                    1</span>
-                                <span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป
-                                    1</span>
-                            </td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿750.00</td>
-                            <td class="p-3.5 text-center text-gray-500">27 ก.ย. 2026</td>
-                        </tr>
+                    <tbody class="divide-y divide-gray-100 text-xs sm:text-sm" id="tableCustomers">
+                        <!-- ข้อมูลลูกค้าและคำสั่งซื้อโหลดแบบเรียลไทม์ -->
                     </tbody>
                 </table>
             </div>
@@ -814,16 +445,19 @@
         </div>
     </footer>
 
-    <!-- 4. จาวาสคริปต์สร้างกราฟและระบบ Filter จำลอง -->
+    <!-- 4. จาวาสคริปต์คำนวณสถิติและอัปเดต Dashboard แบบเรียลไทม์ -->
     <script>
-        // เริ่มต้นสร้างกราฟเมื่อหน้าเว็บโหลดเสร็จ
+        let salesChartInstance = null;
+        let categoryChartInstance = null;
+
+        // เริ่มต้นสร้างกราฟและระบบเรียลไทม์เมื่อหน้าเว็บพร้อม
         document.addEventListener('DOMContentLoaded', () => {
             initSalesTimeChart();
             initCategoryChart();
+            updateLiveReports();
         });
 
         // 1. กราฟยอดขายตามช่วงเวลา (Bar Chart)
-        let salesChartInstance = null;
         function initSalesTimeChart() {
             const ctx = document.getElementById('salesTimeChart');
             if (!ctx) return;
@@ -831,10 +465,10 @@
             salesChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: ['26 ก.ย.', '27 ก.ย.', '28 ก.ย.', '29 ก.ย.', '30 ก.ย.', '01 ต.ค. (วันนี้)'],
+                    labels: [],
                     datasets: [{
-                        label: 'ยอดขายรายวัน (บาท)',
-                        data: [2890, 2640, 2180, 1060, 2250, 1430],
+                        label: 'ยอดขาย (บาท)',
+                        data: [],
                         backgroundColor: 'rgba(37, 99, 235, 0.85)',
                         hoverBackgroundColor: 'rgba(29, 78, 216, 1)',
                         borderRadius: 8,
@@ -849,7 +483,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function (context) {
-                                    return `ยอดขาย: ฿${context.parsed.y.toLocaleString()}`;
+                                    return `ยอดขาย: ฿${(context.parsed.y || 0).toLocaleString()}`;
                                 }
                             }
                         }
@@ -877,17 +511,14 @@
             const ctx = document.getElementById('categoryChart');
             if (!ctx) return;
 
-            new Chart(ctx, {
+            categoryChartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Data & AI', 'Programming', 'พัฒนาตนเอง', 'ธุรกิจ & การตลาด'],
+                    labels: [],
                     datasets: [{
-                        data: [5320, 3600, 2700, 840],
+                        data: [],
                         backgroundColor: [
-                            '#3b82f6', // Blue
-                            '#8b5cf6', // Purple
-                            '#10b981', // Emerald
-                            '#f59e0b'  // Amber
+                            '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'
                         ],
                         borderWidth: 2,
                         borderColor: '#ffffff'
@@ -907,7 +538,7 @@
                         tooltip: {
                             callbacks: {
                                 label: function (context) {
-                                    return ` ฿${context.parsed.toLocaleString()} (${((context.parsed / 12450) * 100).toFixed(1)}%)`;
+                                    return ` ฿${(context.parsed || 0).toLocaleString()}`;
                                 }
                             }
                         }
@@ -917,15 +548,332 @@
             });
         }
 
-        // ฟังก์ชันจำลองตัวกรองวันที่
-        function filterData() {
-            const val = document.getElementById('dateFilter').value;
-            alert(`🔍 กรองข้อมูลตามช่วงเวลา: "${val}" สำเร็จ!\n(ในระบบจริงจะส่งพารามิเตอร์นี้ไปยัง Flask/SQL Query WHERE order_date BETWEEN ... เพื่อดึงข้อมูลใหม่)`);
+        // ฟังก์ชันหัวใจหลัก: คำนวณข้อมูลสถิติ 4 มิติจากคำสั่งซื้อจริงแบบเรียลไทม์
+        function updateLiveReports() {
+            const orders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+
+            // 1. คำนวณ KPI ภาพรวม
+            const totalOrdersCount = orders.length;
+            const approvedOrders = orders.filter(o => o.status === 'approved');
+            const pendingOrders = orders.filter(o => o.status === 'pending');
+            
+            const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const approvedRevenue = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const aov = totalOrdersCount > 0 ? (totalRevenue / totalOrdersCount) : 0;
+
+            const customerMap = {};
+            orders.forEach(o => {
+                const key = (o.customerEmail || o.customerUsername || o.customerName || 'guest').toLowerCase();
+                if (!customerMap[key]) {
+                    customerMap[key] = {
+                        name: o.customerName || 'ลูกค้าทั่วไป',
+                        email: o.customerEmail || '-',
+                        orders: 0,
+                        approved: 0,
+                        pending: 0,
+                        totalSpent: 0,
+                        lastDate: o.date || '-'
+                    };
+                }
+                customerMap[key].orders += 1;
+                if (o.status === 'approved') customerMap[key].approved += 1;
+                else customerMap[key].pending += 1;
+                customerMap[key].totalSpent += (parseFloat(o.total) || 0);
+                if (o.date) customerMap[key].lastDate = o.date;
+            });
+
+            const uniqueCustomers = Object.keys(customerMap).length;
+            const repeatCustomers = Object.values(customerMap).filter(c => c.orders > 1).length;
+
+            // อัปเดตการ์ด KPI
+            const elRev = document.getElementById('kpiRevenue');
+            if (elRev) elRev.innerText = `฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            const elRevSub = document.getElementById('kpiRevenueSub');
+            if (elRevSub) elRevSub.innerText = `จากคำสั่งซื้อจริง (อนุมัติแล้ว ฿${approvedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })})`;
+
+            const elOrders = document.getElementById('kpiOrders');
+            if (elOrders) elOrders.innerText = `${totalOrdersCount} รายการ`;
+            const elOrderStatus = document.getElementById('kpiOrdersStatus');
+            if (elOrderStatus) elOrderStatus.innerHTML = `<span>✓ ชำระแล้ว ${approvedOrders.length}</span> <span class="text-amber-500">• รอตรวจสอบ ${pendingOrders.length}</span>`;
+
+            const elAOV = document.getElementById('kpiAOV');
+            if (elAOV) elAOV.innerText = `฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+            const elCust = document.getElementById('kpiCustomers');
+            if (elCust) elCust.innerText = `${uniqueCustomers} บัญชี`;
+            const elCustSub = document.getElementById('kpiCustomersSub');
+            if (elCustSub) elCustSub.innerHTML = `<span>⭐ ซื้อซ้ำ ${repeatCustomers} บัญชี (${uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0}%)</span>`;
+
+            // 2. รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales by Time Period)
+            const dateMap = {};
+            orders.forEach(o => {
+                const d = (o.date || '2026-10-01').substring(0, 10);
+                if (!dateMap[d]) {
+                    dateMap[d] = { date: d, orders: 0, qty: 0, total: 0 };
+                }
+                dateMap[d].orders += 1;
+                dateMap[d].total += (parseFloat(o.total) || 0);
+                (o.items || []).forEach(it => {
+                    dateMap[d].qty += (parseInt(it.quantity) || 1);
+                });
+            });
+
+            const sortedDates = Object.keys(dateMap).sort().reverse();
+            const dateTableBody = document.getElementById('tableSalesByDate');
+            if (dateTableBody) {
+                if (sortedDates.length === 0) {
+                    dateTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลคำสั่งซื้อในระบบ</td></tr>`;
+                } else {
+                    let totalQtyAll = 0;
+                    dateTableBody.innerHTML = sortedDates.map(d => {
+                        const item = dateMap[d];
+                        totalQtyAll += item.qty;
+                        const dayAov = item.orders > 0 ? (item.total / item.orders) : 0;
+                        return `
+                        <tr class="hover:bg-blue-50/40 transition">
+                            <td class="p-3.5 font-medium text-gray-900">${item.date}</td>
+                            <td class="p-3.5 text-center font-semibold">${item.orders} คำสั่งซื้อ</td>
+                            <td class="p-3.5 text-center">${item.qty} เล่ม</td>
+                            <td class="p-3.5 text-right font-bold text-blue-600">฿${item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5 text-right text-gray-600">฿${dayAov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5 text-center">
+                                <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">เรียลไทม์</span>
+                            </td>
+                        </tr>`;
+                    }).join('');
+
+                    const foot = document.getElementById('footSalesByDate');
+                    if (foot) {
+                        foot.innerHTML = `
+                        <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
+                            <td class="p-3.5">รวมผลประกอบการสะสม</td>
+                            <td class="p-3.5 text-center text-blue-600">${totalOrdersCount} คำสั่งซื้อ</td>
+                            <td class="p-3.5 text-center text-blue-600">${totalQtyAll} เล่ม</td>
+                            <td class="p-3.5 text-right text-blue-700 font-bold">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5 text-right text-blue-700">฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5 text-center text-emerald-600">100% เรียลไทม์</td>
+                        </tr>`;
+                    }
+                }
+            }
+
+            // อัปเดตกราฟแท่งยอดขายตามวันที่
+            const chartDates = Object.keys(dateMap).sort();
+            const chartSales = chartDates.map(d => dateMap[d].total);
+            if (salesChartInstance) {
+                salesChartInstance.data.labels = chartDates.length ? chartDates : ['ไม่มีข้อมูล'];
+                salesChartInstance.data.datasets[0].data = chartSales.length ? chartSales : [0];
+                salesChartInstance.update('none');
+            }
+
+            // 3. รายงานที่ 2: E-Book ขายดี (Top Selling Books)
+            const bookSalesMap = {};
+            orders.forEach(o => {
+                (o.items || []).forEach(it => {
+                    const title = it.title || 'ไม่ระบุชื่อ';
+                    if (!bookSalesMap[title]) {
+                        bookSalesMap[title] = {
+                            title: title,
+                            cover: it.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
+                            author: it.author || 'ไม่ระบุผู้แต่ง',
+                            category: it.category || 'ทั่วไป',
+                            price: parseFloat(it.price) || 0,
+                            qty: 0,
+                            revenue: 0
+                        };
+                    }
+                    const q = parseInt(it.quantity) || 1;
+                    bookSalesMap[title].qty += q;
+                    bookSalesMap[title].revenue += ((parseFloat(it.price) || 0) * q);
+                });
+            });
+
+            const sortedBooks = Object.values(bookSalesMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue);
+            const topBooksBody = document.getElementById('tableTopBooks');
+            if (topBooksBody) {
+                if (sortedBooks.length === 0) {
+                    topBooksBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการซื้อ E-Book</td></tr>`;
+                } else {
+                    const rankBadges = ['🥇 1', '🥈 2', '🥉 3'];
+                    topBooksBody.innerHTML = sortedBooks.slice(0, 10).map((b, idx) => {
+                        const rankText = idx < 3 ? rankBadges[idx] : String(idx + 1);
+                        const percent = totalRevenue > 0 ? ((b.revenue / totalRevenue) * 100).toFixed(1) : 0;
+                        return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5 text-center">
+                                <span class="w-8 h-8 rounded-full ${idx === 0 ? 'bg-amber-100 text-amber-700 font-bold' : idx === 1 ? 'bg-slate-200 text-slate-700 font-bold' : idx === 2 ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-gray-100 text-gray-600'} inline-flex items-center justify-center text-xs shadow-2xs">
+                                    ${rankText}
+                                </span>
+                            </td>
+                            <td class="p-3.5">
+                                <div class="flex items-center gap-3">
+                                    <img src="${b.cover}" alt="${b.title}" class="w-10 h-14 object-cover rounded shadow-2xs" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120'">
+                                    <div>
+                                        <div class="font-bold text-gray-900">${b.title}</div>
+                                        <div class="text-xs text-gray-500">${b.author}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3.5">
+                                <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                    ${b.category}
+                                </span>
+                            </td>
+                            <td class="p-3.5 text-right font-medium text-gray-700">฿${b.price.toFixed(2)}</td>
+                            <td class="p-3.5 text-center font-bold text-amber-600 text-base">${b.qty} เล่ม</td>
+                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5">
+                                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                    <div class="bg-amber-500 h-2.5 rounded-full" style="width: ${Math.min(percent, 100)}%"></div>
+                                </div>
+                                <span class="text-[11px] text-gray-500 mt-1 block">${percent}% ของยอดรวม</span>
+                            </td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+
+            // 4. รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category)
+            const catMap = {};
+            orders.forEach(o => {
+                (o.items || []).forEach(it => {
+                    const cat = it.category || 'ทั่วไป';
+                    if (!catMap[cat]) {
+                        catMap[cat] = { category: cat, qty: 0, revenue: 0 };
+                    }
+                    const q = parseInt(it.quantity) || 1;
+                    catMap[cat].qty += q;
+                    catMap[cat].revenue += ((parseFloat(it.price) || 0) * q);
+                });
+            });
+
+            const sortedCats = Object.values(catMap).sort((a, b) => b.revenue - a.revenue);
+            const catLabels = sortedCats.map(c => c.category);
+            const catValues = sortedCats.map(c => c.revenue);
+            const catPalette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'];
+
+            if (categoryChartInstance) {
+                categoryChartInstance.data.labels = catLabels.length ? catLabels : ['ไม่มีข้อมูล'];
+                categoryChartInstance.data.datasets[0].data = catValues.length ? catValues : [1];
+                categoryChartInstance.data.datasets[0].backgroundColor = catPalette.slice(0, Math.max(catLabels.length, 1));
+                categoryChartInstance.update('none');
+            }
+
+            const catTableBody = document.getElementById('tableCategories');
+            if (catTableBody) {
+                if (sortedCats.length === 0) {
+                    catTableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลยอดขายแยกหมวดหมู่</td></tr>`;
+                } else {
+                    catTableBody.innerHTML = sortedCats.map((c, i) => {
+                        const color = catPalette[i % catPalette.length];
+                        const pct = totalRevenue > 0 ? ((c.revenue / totalRevenue) * 100).toFixed(1) : 0;
+                        return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
+                                <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                                ${c.category}
+                            </td>
+                            <td class="p-3 text-center text-gray-500">-</td>
+                            <td class="p-3 text-center font-bold text-gray-800">${c.qty} เล่ม</td>
+                            <td class="p-3 text-right font-bold text-blue-600">฿${c.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3 text-right font-semibold text-blue-600">${pct}%</td>
+                        </tr>`;
+                    }).join('');
+
+                    const catFoot = document.getElementById('footCategories');
+                    if (catFoot) {
+                        const totalCatQty = sortedCats.reduce((s, c) => s + c.qty, 0);
+                        catFoot.innerHTML = `
+                        <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
+                            <td class="p-3">รวม ${sortedCats.length} หมวดหมู่</td>
+                            <td class="p-3 text-center">-</td>
+                            <td class="p-3 text-center text-blue-600">${totalCatQty} เล่ม</td>
+                            <td class="p-3 text-right text-blue-700">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3 text-right text-emerald-600">100.0%</td>
+                        </tr>`;
+                    }
+                }
+            }
+
+            // 5. รายงานที่ 4: ลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)
+            const sortedCustomers = Object.values(customerMap).sort((a, b) => b.totalSpent - a.totalSpent);
+            const custTableBody = document.getElementById('tableCustomers');
+            if (custTableBody) {
+                if (sortedCustomers.length === 0) {
+                    custTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลลูกค้าในระบบ</td></tr>`;
+                } else {
+                    custTableBody.innerHTML = sortedCustomers.map(cust => {
+                        const initials = (cust.name || 'US').substring(0, 2);
+                        let tierBadge = `<span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">Member</span>`;
+                        if (cust.totalSpent >= 1500) {
+                            tierBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-200">👑 VIP Gold</span>`;
+                        } else if (cust.totalSpent >= 800) {
+                            tierBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-200">🥈 VIP Silver</span>`;
+                        }
+
+                        return `
+                        <tr class="hover:bg-slate-50 transition">
+                            <td class="p-3.5">
+                                <div class="flex items-center gap-2.5">
+                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                                        ${initials}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-gray-900">${cust.name}</div>
+                                        <div class="text-xs text-gray-400">${cust.email}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="p-3.5 text-center">${tierBadge}</td>
+                            <td class="p-3.5 text-center font-bold text-gray-900">${cust.orders} ครั้ง</td>
+                            <td class="p-3.5 text-center space-x-1">
+                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ ${cust.approved}</span>
+                                ${cust.pending > 0 ? `<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป ${cust.pending}</span>` : ''}
+                            </td>
+                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${cust.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                            <td class="p-3.5 text-center text-gray-500">${cust.lastDate}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
         }
 
-        // ฟังก์ชันจำลองส่งออกรายงาน
+        // ระบบ Real-Time Event Listeners
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'orders_list' || e.key === 'ebooks_store') {
+                updateLiveReports();
+            }
+        });
+        window.addEventListener('ordersUpdated', updateLiveReports);
+        window.addEventListener('pageshow', updateLiveReports);
+        // อัปเดตข้อมูลอัตโนมัติทุก 2.5 วินาที
+        setInterval(updateLiveReports, 2500);
+
+        // ฟังก์ชันจำลองตัวกรองวันที่
+        function filterData() {
+            updateLiveReports();
+        }
+
+        // ฟังก์ชันส่งออกรายงานเป็น CSV
         function exportReport() {
-            alert('📥 ส่งออกข้อมูลรายงานสำเร็จ!\nระบบสร้างไฟล์ "EBook_Store_Sales_Report_2026.csv" เรียบร้อยแล้ว');
+            const orders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+            if (!orders || orders.length === 0) {
+                alert('ยังไม่มีข้อมูลคำสั่งซื้อสำหรับส่งออก');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,Order ID,Customer Name,Email,Total (THB),Status,Date\n";
+            orders.forEach(o => {
+                csvContent += `"${o.id}","${o.customerName || ''}","${o.customerEmail || ''}","${o.total}","${o.status}","${o.date || ''}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `EBook_Store_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
     </script>
 </body>

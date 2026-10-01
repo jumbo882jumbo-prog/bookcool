@@ -107,7 +107,34 @@
     <!-- จาวาสคริปต์จำลองการกดดาวน์โหลด และโหลดข้อมูลหนังสือจากคำสั่งซื้อ -->
     <script>
         function downloadBook(bookTitle, format) {
-            alert(`🎉 เริ่มต้นดาวน์โหลดไฟล์ E-Book:\n"${bookTitle}"\nรูปแบบไฟล์: ${format}\n\nไฟล์จำลองเริ่มการดาวน์โหลดลงในเครื่องของคุณเรียบร้อยแล้ว!`);
+            alert('ขอบคุณที่ซื้อหนังสือ');
+
+            // สร้างและเริ่มดาวน์โหลดไฟล์ E-Book ลงเครื่องจริง
+            const content = `=====================================================
+📚 E-BOOK: ${bookTitle}
+=====================================================
+
+ขอขอบคุณที่สั่งซื้อหนังสือกับเรา E-Book Store!
+
+📖 ชื่อหนังสือ: ${bookTitle}
+🔖 รูปแบบไฟล์: ${format || 'PDF / EPUB'}
+📅 วันที่ดาวน์โหลด: ${new Date().toLocaleDateString('th-TH')} ${new Date().toLocaleTimeString('th-TH')}
+
+ขอให้มีความสุขและเพลิดเพลินกับการอ่านหนังสือเล่มนี้ครับ/ค่ะ
+
+© 2026 E-Book Store Mini Project. All rights reserved.
+=====================================================`;
+
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const safeTitle = (bookTitle || 'ebook').replace(/[/\\?%*:|"<>]/g, '_');
+            a.download = `${safeTitle}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         function renderMyBooks() {
@@ -115,11 +142,43 @@
             const banner = document.getElementById('newOrderBanner');
             const bannerText = document.getElementById('bannerOrderText');
             
-            const orders = orderManager.getOrders();
+            // 1. ตรวจสอบว่าผู้ใช้ล็อกอินอยู่หรือไม่
+            const currentUser = auth.getCurrentUser();
+            if (!currentUser) {
+                // ถ้ายังไม่ล็อกอิน ให้ซ่อนแบนเนอร์ และแสดงข้อความแจ้งเตือนให้เข้าสู่ระบบ
+                if (banner) banner.classList.add('hidden');
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+                        <div class="text-5xl mb-3">🔒</div>
+                        <h3 class="text-lg font-bold text-gray-800">กรุณาเข้าสู่ระบบก่อน</h3>
+                        <p class="text-xs text-gray-500 mt-1 mb-6">คุณต้องเข้าสู่ระบบเพื่อดูรายการหนังสือที่คุณซื้อไว้</p>
+                        <div class="flex justify-center gap-3">
+                            <a href="login.html?redirect=my-books.html" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-6 py-3 rounded-xl shadow transition">
+                                🔑 เข้าสู่ระบบทันที
+                            </a>
+                            <a href="index.html#bookSection" class="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold px-5 py-3 rounded-xl transition">
+                                📖 เลือกซื้อหนังสือหน้าร้าน
+                            </a>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            // 2. ดึงเฉพาะคำสั่งซื้อที่เป็นของคนที่ล็อกอินอยู่เท่านั้น (เทียบจาก username หรือ email)
+            const allOrders = orderManager.getOrders();
+            const orders = allOrders.filter(o => {
+                const matchUsername = o.customerUsername && currentUser.username &&
+                    o.customerUsername.toLowerCase() === currentUser.username.toLowerCase();
+                const matchEmail = o.customerEmail && currentUser.email &&
+                    o.customerEmail.toLowerCase() === currentUser.email.toLowerCase();
+                return matchUsername || matchEmail;
+            });
+
             const urlParams = new URLSearchParams(window.location.search);
             const newlyCreatedOrderId = urlParams.get('newOrder');
 
-            // จัดการแบนเนอร์แจ้งเตือนคำสั่งซื้อล่าสุด
+            // จัดการแบนเนอร์แจ้งเตือนคำสั่งซื้อล่าสุด (เฉพาะของ user ปัจจุบัน)
             const pendingOrders = orders.filter(o => o.status === 'pending');
             if (newlyCreatedOrderId || pendingOrders.length > 0) {
                 const targetOrder = orders.find(o => o.id === newlyCreatedOrderId) || pendingOrders[0];
@@ -129,6 +188,8 @@
                         const itemsNames = (targetOrder.items || []).map(i => i.title).join(', ');
                         bannerText.innerHTML = `คำสั่งซื้อ <strong>#${targetOrder.id}</strong> (${itemsNames}) กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะสามารถดาวน์โหลดไฟล์ได้ทันที`;
                     }
+                } else if (banner) {
+                    banner.classList.add('hidden');
                 }
             } else {
                 if (banner) banner.classList.add('hidden');
@@ -139,7 +200,7 @@
                     <div class="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
                         <div class="text-5xl mb-3">📚</div>
                         <h3 class="text-lg font-bold text-gray-800">คุณยังไม่มีหนังสือในคลังหนังสือ</h3>
-                        <p class="text-xs text-gray-500 mt-1 mb-6">เลือกซื้อ E-Book คุณภาพแล้วกลับมาเปิดอ่านหรือดาวน์โหลดได้ที่นี่</p>
+                        <p class="text-xs text-gray-500 mt-1 mb-6">สวัสดีคุณ <strong>${currentUser.name || currentUser.username}</strong> คุณยังไม่ได้สั่งซื้อหนังสือใดๆ ในบัญชีนี้</p>
                         <a href="index.html#bookSection" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-6 py-3 rounded-xl shadow transition">
                             📖 เลือกซื้อหนังสือหน้าร้าน
                         </a>
