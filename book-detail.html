@@ -14,6 +14,8 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -46,10 +48,8 @@
                         class="absolute -top-2 -right-3 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.2">0</span>
                 </a>
 
-                <!-- ปุ่มลัดหลังบ้าน Admin -->
-                <a href="admin.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-gray-700 transition hidden sm:inline-block">
-                    ⚙️ หลังบ้าน
-                </a>
+                <!-- ปุ่มข้อมูลผู้ใช้งานและล็อกอิน -->
+                <div class="auth-nav-container flex items-center"></div>
             </div>
         </div>
     </header>
@@ -57,14 +57,20 @@
     <!-- 2. ส่วนเนื้อหาหลัก (Main Content) -->
     <main class="max-w-6xl mx-auto px-4 py-8 w-full flex-grow">
 
-        <!-- แถบระบุตำแหน่ง (Breadcrumb Navigation) -->
-        <nav class="flex items-center gap-2 text-xs sm:text-sm text-gray-500 mb-6 overflow-x-auto whitespace-nowrap">
-            <a href="index.html" class="hover:text-blue-600 transition">หน้าแรก</a>
-            <span>/</span>
-            <a href="index.html#bookSection" class="hover:text-blue-600 transition" id="breadcrumbCategory">หมวดหมู่หนังสือ</a>
-            <span>/</span>
-            <span class="text-gray-900 font-semibold" id="breadcrumbTitle">ถอดรหัสวิญญาณแห่งดวงดาว</span>
-        </nav>
+        <!-- แถบระบุตำแหน่งและปุ่มแก้ไขหนังสือสำหรับแอดมิน -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
+            <nav class="flex items-center gap-2 text-xs sm:text-sm text-gray-500 overflow-x-auto whitespace-nowrap">
+                <a href="index.html" class="hover:text-blue-600 transition">หน้าแรก</a>
+                <span>/</span>
+                <a href="index.html#bookSection" class="hover:text-blue-600 transition" id="breadcrumbCategory">ธุรกิจ & การตลาด</a>
+                <span>/</span>
+                <span class="text-gray-900 font-semibold" id="breadcrumbTitle">Lean Startup & Product Strategy</span>
+            </nav>
+            <a id="adminEditBookBtn" href="add-book.html?edit=1&return=detail"
+                class="admin-only-control self-start sm:self-auto bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-2xs">
+                ✏️ <span>แก้ไขหนังสือเล่มนี้ (Admin)</span>
+            </a>
+        </div>
 
         <!-- กล่องรายละเอียดหนังสือแบ่ง 2 คอลัมน์ (Detail Card Layout) -->
         <div class="bg-white rounded-3xl border border-gray-200 shadow-sm p-6 sm:p-10 mb-12">
@@ -75,13 +81,13 @@
                     <div class="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-lg border border-gray-100 bg-gray-100 group">
                         <!-- ปกหนังสือขนาดใหญ่ -->
                         <img id="detailCover"
-                            src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600"
+                            src="https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600"
                             alt="Book Cover" class="w-full h-[430px] object-cover group-hover:scale-105 transition duration-300">
                         
                         <!-- ป้ายหมวดหมู่ -->
                         <span id="detailCategoryBadge"
                             class="absolute top-4 left-4 bg-blue-600/90 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow">
-                            พัฒนาตนเอง
+                            ธุรกิจ & การตลาด
                         </span>
 
                         <!-- ป้ายประเภทสื่อดิจิทัล -->
@@ -113,7 +119,7 @@
                         <!-- หมวดหมู่และรีวิว -->
                         <div class="flex items-center gap-3 mb-2">
                             <span id="detailCategory" class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-md">
-                                พัฒนาตนเอง & จิตวิทยา
+                                ธุรกิจ & การตลาด
                             </span>
                             <div class="flex items-center text-amber-400 text-xs font-bold gap-1">
                                 <span>⭐⭐⭐⭐⭐</span>
@@ -123,12 +129,12 @@
 
                         <!-- ชื่อหนังสือขนาดใหญ่ -->
                         <h1 id="detailTitle" class="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 leading-tight mb-2">
-                            ถอดรหัสวิญญาณแห่งดวงดาว
+                            Lean Startup & Product Strategy
                         </h1>
 
                         <!-- ชื่อผู้แต่งและสำนักพิมพ์ -->
                         <p class="text-sm sm:text-base text-gray-600 mb-4">
-                            ผู้แต่ง: <span id="detailAuthor" class="font-semibold text-gray-900">กวิน ทัศนีย์</span> 
+                            ผู้แต่ง: <span id="detailAuthor" class="font-semibold text-gray-900">ณัฐพร นวัตกรรม</span> 
                             <span class="text-gray-400 mx-2">|</span> 
                             สำนักพิมพ์: <span class="text-gray-700">Mind & Science Press</span>
                         </p>
@@ -136,9 +142,9 @@
                         <!-- ราคาสินค้า -->
                         <div class="bg-blue-50/60 border border-blue-100 rounded-2xl p-4 sm:p-5 mb-6 flex items-baseline gap-4">
                             <span class="text-xs text-gray-500 font-medium">ราคา E-Book:</span>
-                            <span id="detailPrice" class="text-3xl sm:text-4xl font-extrabold text-blue-600">฿300.00</span>
+                            <span id="detailPrice" class="text-3xl sm:text-4xl font-extrabold text-blue-600">฿320.00</span>
                             <span class="text-sm text-gray-400 line-through">฿450.00</span>
-                            <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">-33% พิเศษ</span>
+                            <span class="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">-29% พิเศษ</span>
                         </div>
 
                         <!-- รายละเอียดเนื้อหาและคำโปรยย่อ (Description & Synopsis) -->
@@ -147,7 +153,7 @@
                                 <span>📝</span> เรื่องย่อและคำโปรยหนังสือ
                             </h2>
                             <p id="detailDescription" class="text-sm sm:text-base text-gray-600 leading-relaxed">
-                                หนังสือที่รวบรวมหลักคิดการค้นหาความหมายและการยกระดับจิตใจ ผสานปรัชญาดวงดาวกับหลักจิตวิทยาสมัยใหม่ เพื่อให้คุณค้นพบศักยภาพที่ซ่อนอยู่ภายในตัวเอง และก้าวข้ามอุปสรรคชีวิตด้วยมุมมองใหม่ที่สว่างไสวดั่งดวงดารา
+                                คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ
                             </p>
                         </div>
 
@@ -186,10 +192,10 @@
                         </button>
 
                         <!-- ปุ่ม "ซื้อทันที" (Buy Now) เชื่อมโยงไปหน้าชำระเงิน checkout.html -->
-                        <a href="checkout.html"
+                        <button type="button" onclick="buyNowDetail()"
                             class="w-full sm:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-2xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer">
                             💳 ซื้อทันที (Buy Now)
-                        </a>
+                        </button>
                     </div>
                 </div>
 
@@ -290,7 +296,7 @@
                 <a href="index.html#bookSection" class="hover:text-blue-600 transition">📖 ร้านค้า</a>
                 <a href="cart.html" class="hover:text-blue-600 transition">🛒 ตะกร้าสินค้า</a>
                 <a href="my-books.html" class="hover:text-blue-600 transition">📚 หนังสือของฉัน</a>
-                <a href="admin.html" class="text-red-600 hover:text-red-700 transition font-semibold">⚙️ จัดการระบบ (Admin)</a>
+                <a href="admin.html" class="admin-link-nav text-red-600 hover:text-red-700 transition font-semibold">⚙️ จัดการระบบ (Admin)</a>
             </div>
             <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
         </div>
@@ -298,92 +304,206 @@
 
     <!-- 5. จาวาสคริปต์ควบคุมการทำงานและโหลดข้อมูลหนังสือ -->
     <script>
-        // ฐานข้อมูลหนังสือจำลอง 4 เล่ม
+        // ฐานข้อมูลหนังสือจำลอง 8 เล่มตามหน้าเว็บไซต์
         const booksData = {
             1: {
-                title: "ถอดรหัสวิญญาณแห่งดวงดาว",
-                author: "กวิน ทัศนีย์",
-                price: "฿300.00",
-                category: "พัฒนาตนเอง",
-                categoryFull: "พัฒนาตนเอง & จิตวิทยา",
-                cover: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600",
-                description: "หนังสือที่รวบรวมหลักคิดการค้นหาความหมายและการยกระดับจิตใจ ผสานปรัชญาดวงดาวกับหลักจิตวิทยาสมัยใหม่ เพื่อให้คุณค้นพบศักยภาพที่ซ่อนอยู่ภายในตัวเอง และก้าวข้ามอุปสรรคชีวิตด้วยมุมมองใหม่ที่สว่างไสวดั่งดวงดารา",
-                pages: "312 หน้า",
-                size: "18.4 MB",
+                title: "Lean Startup & Product Strategy",
+                author: "ณัฐพร นวัตกรรม",
+                price: "฿320.00",
+                category: "ธุรกิจ & การตลาด",
+                categoryFull: "ธุรกิจ & การตลาด (Business & Marketing)",
+                cover: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600",
+                description: "คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ เรียนรู้วิธีคิดแบบ Lean และกลยุทธ์สร้างโปรดักต์ที่ตอบโจทย์ความต้องการของผู้ใช้อย่างแท้จริง",
+                pages: "310 หน้า",
+                size: "16.8 MB",
                 format: "PDF / EPUB"
             },
             2: {
-                title: "Data Analytics with SQL & Business",
-                author: "ดร.สมชาย ปัญญาชัย",
-                price: "฿380.00",
-                category: "Data & AI",
-                categoryFull: "วิทยาศาสตร์ข้อมูล & AI",
-                cover: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600",
-                description: "คู่มือฉบับสมบูรณ์สำหรับการวิเคราะห์ข้อมูลธุรกิจด้วยภาษา SQL ตั้งแต่คำสั่งพื้นฐาน SELECT, JOIN ไปจนถึง Window Functions และการประมวลผล Big Data พร้อมกรณีศึกษาการสร้าง Dashboard เพื่อการตัดสินใจเชิงธุรกิจอย่างแม่นยำ",
-                pages: "420 หน้า",
-                size: "24.6 MB",
+                title: "กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)",
+                author: "กวี ศรีสยาม",
+                price: "฿195.00",
+                category: "วรรณกรรม & นวนิยาย",
+                categoryFull: "วรรณกรรม & นวนิยาย (Sci-Fi & Fantasy)",
+                cover: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600",
+                description: "นวนิยายไซไฟแฟนตาซี การเดินทางข้ามห้วงกาลเวลาเพื่อกอบกู้ดวงดาวที่สาบสูญ เรื่องราวการผจญภัยอันเข้มข้นของปัญญาประดิษฐ์ยุคบรรพกาลและความลับแห่งเอกภพที่ถูกซ่อนไว้",
+                pages: "412 หน้า",
+                size: "22.5 MB",
                 format: "PDF / EPUB"
             },
             3: {
-                title: "จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป",
-                author: "ศิลป์การสื่อสาร",
-                price: "฿280.00",
-                category: "ธุรกิจ & การตลาด",
-                categoryFull: "ธุรกิจ & การตลาด",
-                cover: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=600",
-                description: "ศาสตร์และศิลป์แห่งการโน้มน้าวใจในโลกธุรกิจ เทคนิคการอ่านภาษากาย การสร้างความไว้เนื้อเชื่อใจ และยุทธวิธีการเจรจาเพื่อบรรลุข้อตกลงที่ทั้งสองฝ่ายได้รับประโยชน์สูงสุด (Win-Win Solution)",
-                pages: "275 หน้า",
-                size: "14.2 MB",
+                title: "Practical Generative AI for Developers",
+                author: "ดร. ธีรภัทร ปัญญาประดิษฐ์",
+                price: "฿490.00",
+                category: "วิทยาศาสตร์ข้อมูล & AI",
+                categoryFull: "วิทยาศาสตร์ข้อมูล & AI (Generative AI)",
+                cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600",
+                description: "คู่มือนักพัฒนาในการเชื่อมต่อ LLM APIs, Prompt Engineering, RAG Architecture และการสร้าง AI Agents อัดแน่นด้วยโค้ดตัวอย่าง Python, LangChain, LlamaIndex และเวิร์กโฟลว์การนำไปใช้งานจริงบนโปรดักชัน",
+                pages: "480 หน้า",
+                size: "34.2 MB",
                 format: "PDF / EPUB"
             },
             4: {
-                title: "Clean Architecture & Design Patterns",
-                author: "ทีมวิศวกรซอฟต์แวร์",
-                price: "฿450.00",
-                category: "Programming",
-                categoryFull: "เทคโนโลยี & การเขียนโปรแกรม",
-                cover: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=600",
-                description: "คัมภีร์การออกแบบสถาปัตยกรรมซอฟต์แวร์ระดับมืออาชีพ อธิบายหลักการ SOLID Principles, Microservices, Domain-Driven Design (DDD) และ Design Patterns ที่ใช้ได้จริงในงานพัฒนาซอฟต์แวร์เพื่อสร้างระบบที่ยั่งยืนและขยายขนาดได้",
-                pages: "490 หน้า",
-                size: "32.1 MB",
+                title: "The Modern Growth Hacking & Digital Marketing",
+                author: "อนันต์ การตลาดดิจิทัล",
+                price: "฿390.00",
+                category: "ธุรกิจ & การตลาด",
+                categoryFull: "ธุรกิจ & การตลาด (Growth Hacking)",
+                cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600",
+                description: "กลยุทธ์ยิงแอดและสร้าง Funnel ปิดการขายอัตโนมัติ สำหรับธุรกิจออนไลน์ที่ต้องการสเกลยอดขายแบบก้าวกระโดด เจาะลึก Data-Driven Marketing, Conversion Rate Optimization (CRO) และ Automation Tools",
+                pages: "360 หน้า",
+                size: "20.1 MB",
+                format: "PDF / EPUB"
+            },
+            5: {
+                title: "จิตวิทยาการบริหารเวลา Focus & Productivity",
+                author: "พญ. ธิดารัตน์ สุขภาพจิต",
+                price: "฿250.00",
+                category: "พัฒนาตนเอง & จิตวิทยา",
+                categoryFull: "พัฒนาตนเอง & จิตวิทยา (Productivity)",
+                cover: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600",
+                description: "เคล็ดลับทางประสาทวิทยาในการกำจัดนิสัยผลัดวันประกันพรุ่งและโฟกัสกับงานสำคัญอย่างเด็ดขาด เทคนิคสร้างสภาวะ Deep Work, จัดการพลังงานในแต่ละวัน และสร้างสมดุลชีวิตการทำงานอย่างมีความสุข",
+                pages: "268 หน้า",
+                size: "14.5 MB",
+                format: "PDF / EPUB"
+            },
+            6: {
+                title: "คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน",
+                author: "ชัชวาล เศรษฐศาสตร์",
+                price: "฿290.00",
+                category: "การเงิน & การลงทุน",
+                categoryFull: "การเงิน & การลงทุน (Tax & Wealth Management)",
+                cover: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=600",
+                description: "เข้าใจการลดหย่อนภาษีอย่างถูกต้อง พร้อมกลยุทธ์สร้างอิสรภาพทางการเงินผ่านกองทุนรวมและหุ้นปันผล วางแผนบริหารกระแสเงินสดและพอร์ตการลงทุนระยะยาวสำหรับมนุษย์เงินเดือนและฟรีแลนซ์",
+                pages: "320 หน้า",
+                size: "18.3 MB",
+                format: "PDF / EPUB"
+            },
+            7: {
+                title: "Full-Stack Web Development with Python & Modern Stack",
+                author: "อาจารย์ พรชัย เทคโนโลยี",
+                price: "฿420.00",
+                category: "เทคโนโลยี & การเขียนโปรแกรม",
+                categoryFull: "เทคโนโลยี & การเขียนโปรแกรม (Full-Stack Dev)",
+                cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600",
+                description: "สร้างเว็บแอปพลิเคชันระดับโปรดักชันด้วย Flask, RESTful API และฐานข้อมูล พร้อมการทำ Deployment ตั้งแต่พื้นฐาน Frontend HTML/CSS/JS จนถึง Backend, Authentication, Docker และ CI/CD",
+                pages: "512 หน้า",
+                size: "38.7 MB",
+                format: "PDF / EPUB"
+            },
+            8: {
+                title: "Mastering Database Design & SQL",
+                author: "ดร. กิตติพงษ์ วิริยะกุล",
+                price: "฿299.00",
+                category: "เทคโนโลยี & การเขียนโปรแกรม",
+                categoryFull: "เทคโนโลยี & การเขียนโปรแกรม (Database & SQL)",
+                cover: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=600",
+                description: "เจาะลึกการออกแบบฐานข้อมูลเชิงสัมพันธ์ตั้งแต่ระดับพื้นฐาน Normalization 3NF จนถึงการ Optimize Query การวาง Index, วิเคราะห์ Execution Plan และการจัดการ Concurrency เพื่อรองรับโหลดข้อมูลขนาดใหญ่",
+                pages: "390 หน้า",
+                size: "26.4 MB",
                 format: "PDF / EPUB"
             }
         };
 
         // ตรวจสอบ Parameter จาก URL (เช่น ?id=2)
         const urlParams = new URLSearchParams(window.location.search);
-        const bookId = urlParams.get('id') || '1';
-        const currentBook = booksData[bookId] || booksData[1];
+        let currentBook = booksData[1];
+
+        // ฟังก์ชันโหลดข้อมูลหนังสือและแสดงผลบนหน้าจอ
+        function renderBookDetail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const bookId = urlParams.get('id') || '1';
+
+            let allBooksMap = { ...booksData };
+            const storedBooks = localStorage.getItem('ebooks_store');
+            if (storedBooks) {
+                try {
+                    const parsed = JSON.parse(storedBooks);
+                    if (Array.isArray(parsed)) {
+                        parsed.forEach(b => {
+                            const priceNum = parseFloat(b.price) || 0;
+                            allBooksMap[String(b.id)] = {
+                                title: b.title,
+                                author: b.author || "ไม่ระบุผู้แต่ง",
+                                price: `฿${priceNum.toFixed(2)}`,
+                                category: b.category,
+                                categoryFull: b.category,
+                                cover: b.cover || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600",
+                                description: b.description || "ไม่มีคำอธิบายเพิ่มเติม",
+                                pages: b.pages || "320 หน้า",
+                                size: b.size || "18.5 MB",
+                                format: b.format || "PDF / EPUB"
+                            };
+                        });
+                    }
+                } catch (e) {
+                    console.error("Error loading books in detail page", e);
+                }
+            }
+
+            currentBook = allBooksMap[String(bookId)] || allBooksMap[1] || booksData[1];
+
+            const pageTitle = document.getElementById('pageTitle');
+            if (pageTitle) pageTitle.innerText = `${currentBook.title} - E-Book Store`;
+            const bcTitle = document.getElementById('breadcrumbTitle');
+            if (bcTitle) bcTitle.innerText = currentBook.title;
+            const bcCat = document.getElementById('breadcrumbCategory');
+            if (bcCat) bcCat.innerText = currentBook.category;
+            
+            const coverEl = document.getElementById('detailCover');
+            if (coverEl) {
+                coverEl.src = currentBook.cover;
+                coverEl.alt = currentBook.title;
+            }
+            const catBadge = document.getElementById('detailCategoryBadge');
+            if (catBadge) catBadge.innerText = currentBook.category;
+            const catFull = document.getElementById('detailCategory');
+            if (catFull) catFull.innerText = currentBook.categoryFull;
+            
+            const dTitle = document.getElementById('detailTitle');
+            if (dTitle) dTitle.innerText = currentBook.title;
+            const dAuthor = document.getElementById('detailAuthor');
+            if (dAuthor) dAuthor.innerText = currentBook.author;
+            const dPrice = document.getElementById('detailPrice');
+            if (dPrice) dPrice.innerText = currentBook.price;
+            const dDesc = document.getElementById('detailDescription');
+            if (dDesc) dDesc.innerText = currentBook.description;
+            
+            const dPages = document.getElementById('detailPages');
+            if (dPages) dPages.innerText = currentBook.pages;
+            const dSize = document.getElementById('detailSize');
+            if (dSize) dSize.innerText = currentBook.size;
+            const dFormat = document.getElementById('detailFormat');
+            if (dFormat) dFormat.innerText = currentBook.format;
+
+            const editBtn = document.getElementById('adminEditBookBtn');
+            if (editBtn) {
+                editBtn.href = `add-book.html?edit=${encodeURIComponent(bookId)}&return=detail`;
+            }
+        }
 
         // แสดงข้อมูลหนังสือลงบนหน้าเว็บแบบไดนามิก
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('pageTitle').innerText = `${currentBook.title} - E-Book Store`;
-            document.getElementById('breadcrumbTitle').innerText = currentBook.title;
-            document.getElementById('breadcrumbCategory').innerText = currentBook.category;
-            
-            document.getElementById('detailCover').src = currentBook.cover;
-            document.getElementById('detailCover').alt = currentBook.title;
-            document.getElementById('detailCategoryBadge').innerText = currentBook.category;
-            document.getElementById('detailCategory').innerText = currentBook.categoryFull;
-            
-            document.getElementById('detailTitle').innerText = currentBook.title;
-            document.getElementById('detailAuthor').innerText = currentBook.author;
-            document.getElementById('detailPrice').innerText = currentBook.price;
-            document.getElementById('detailDescription').innerText = currentBook.description;
-            
-            document.getElementById('detailPages').innerText = currentBook.pages;
-            document.getElementById('detailSize').innerText = currentBook.size;
-            document.getElementById('detailFormat').innerText = currentBook.format;
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderBookDetail);
+        } else {
+            renderBookDetail();
+        }
+        window.addEventListener('pageshow', renderBookDetail);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'ebooks_store') renderBookDetail();
         });
 
-        // ลูกเล่น JavaScript: เมื่อกดปุ่ม "ใส่รถกระเช้า" (Add to Cart)
-        let cartCount = 0;
+        // เมื่อกดปุ่ม "ใส่รถกระเช้า" (Add to Cart)
         function addToCartDetail() {
-            cartCount++;
-            // อัปเดตตัวเลขบนตะกร้าสินค้า
-            document.getElementById('cartCountBadge').innerText = cartCount;
-            // แจ้งเตือน Alert
-            alert(`✅ เพิ่มหนังสือ "${currentBook.title}" ลงในรถกระเช้าเรียบร้อยแล้ว!\nยอดหนังสือในตะกร้า: ${cartCount} เล่ม\nคุณสามารถคลิกที่ปุ่ม "🛒 ตะกร้า" ด้านบนเพื่อดูรายการและชำระเงินได้ทันที`);
+            if (!currentBook) return;
+            cartManager.addToCart(currentBook);
+            alert(`✅ เพิ่มหนังสือ "${currentBook.title}" ลงในรถกระเช้าเรียบร้อยแล้ว!\nยอดหนังสือในตะกร้า: ${cartManager.getCartCount()} เล่ม\nคุณสามารถคลิกที่ปุ่ม "🛒 ตะกร้า" ด้านบนเพื่อดูรายการและชำระเงินได้ทันที`);
+        }
+
+        // เมื่อกดปุ่ม "ซื้อทันที" (Buy Now)
+        function buyNowDetail() {
+            if (!currentBook) return;
+            cartManager.addToCart(currentBook);
+            window.location.href = 'checkout.html';
         }
 
         // ฟังก์ชันจำลองเปิดดูตัวอย่างหนังสือฟรี

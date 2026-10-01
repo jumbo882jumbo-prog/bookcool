@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>แก้ไขข้อมูล E-Book</title>
+    <script src="auth.js"></script>
+    <script>
+        auth.protectAdminPage();
+        // นำทางไปยังหน้าแก้ไข add-book.html พร้อมส่งพารามิเตอร์รหัสหนังสือ
+        const params = new URLSearchParams(window.location.search);
+        const bookId = params.get('id') || params.get('edit') || '1';
+        const returnUrl = params.get('return') || 'admin';
+        window.location.replace(`add-book.html?edit=${encodeURIComponent(bookId)}&return=${encodeURIComponent(returnUrl)}`);
+    </script>
+</head>
+<body style="font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f8fafc; color: #475569;">
+    <h2>กำลังเปิดหน้าจอแก้ไขข้อมูลหนังสือ...</h2>
+    <p>หากเบราว์เซอร์ไม่เปลี่ยนหน้าอัตโนมัติ <a id="fallbackLink" href="add-book.html" style="color: #2563eb;">คลิกที่นี่</a></p>
+    <script>
+        document.getElementById('fallbackLink').href = `add-book.html?edit=${encodeURIComponent(bookId)}&return=${encodeURIComponent(returnUrl)}`;
+    </script>
+</body>
+</html>

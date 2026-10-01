@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL Query Console - ระบบจัดการฐานข้อมูล Admin</title>
+    <!-- โหลด Tailwind CSS จาก CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Prompt จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+    <!-- โหลด AlaSQL: In-Memory SQL Database Engine สำหรับรันคำสั่ง SQL จริงในเบราว์เซอร์ -->
+    <script src="https://cdn.jsdelivr.net/npm/alasql@4"></script>
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+        .font-code {
+            font-family: 'Fira Code', monospace;
+        }
+    </style>
+    <!-- ระบบตรวจสอบสิทธิ์ Admin -->
+    <script src="auth.js"></script>
+    <script>
+        auth.protectAdminPage();
+    </script>
+</head>
+
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- 1. แถบนำทางด้านบน Navbar หลังบ้าน (Admin Header) -->
+    <header class="bg-gray-900 text-white shadow-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <span class="bg-red-600 text-white px-2.5 py-1 rounded font-bold text-xs">ADMIN</span>
+                <a href="admin.html" class="font-bold text-lg hover:text-gray-200 transition">E-Book Store Management</a>
+            </div>
+
+            <!-- เมนูระบบหลังบ้าน -->
+            <div class="flex items-center space-x-1 sm:space-x-3 text-sm">
+                <!-- เมนู 1: จัดการคำสั่งซื้อ -->
+                <a href="admin.html"
+                    class="text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition flex items-center gap-1.5 font-medium">
+                    📋 <span class="hidden md:inline">จัดการคำสั่งซื้อ</span>
+                </a>
+
+                <!-- เมนู 2: รายงานวิเคราะห์ -->
+                <a href="reports.html"
+                    class="text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition flex items-center gap-1.5 font-medium">
+                    📊 <span class="hidden md:inline">รายงานวิเคราะห์</span>
+                </a>
+
+                <!-- เมนู 3: คำสั่ง SQL (Active) -->
+                <a href="sql-console.html"
+                    class="bg-blue-600 text-white px-3 py-1.5 rounded-lg font-medium shadow-sm transition flex items-center gap-1.5">
+                    💻 <span>คำสั่ง SQL</span>
+                </a>
+
+                <!-- เมนู 4: ไปที่หน้าร้าน -->
+                <a href="index.html"
+                    class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 transition flex items-center gap-1.5">
+                    🌐 <span class="hidden sm:inline">หน้าร้านค้า</span>
+                </a>
+
+                <!-- ผู้ใช้งาน Admin และปุ่มออกจากระบบ -->
+                <div class="auth-nav-container flex items-center"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. เนื้อหาหลัก: คอนโซลเขียนคำสั่ง SQL -->
+    <main class="max-w-7xl mx-auto px-4 py-8 w-full flex-grow">
+
+        <!-- หัวข้อหน้าและปุ่มลัด -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-md">
+                        Database Query Studio
+                    </span>
+                    <span class="text-xs font-semibold bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span> Live Connected
+                    </span>
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mt-1 flex items-center gap-2">
+                    <span>💻</span> SQL Query Console & Data Explorer
+                </h1>
+                <p class="text-sm text-gray-500 mt-1">
+                    เขียนคำสั่ง SQL เพื่อดึงข้อมูล วิเคราะห์ และประมวลผลจากตารางจริงในระบบ (ebooks, orders, order_items, users, categories)
+                </p>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="refreshDatabase(true)" title="รีโหลดข้อมูลล่าสุดจาก LocalStorage"
+                    class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                    🔄 <span>ซิงก์ข้อมูลล่าสุด</span>
+                </button>
+                <a href="admin.html"
+                    class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm">
+                    ← กลับหน้าจัดการคำสั่งซื้อ
+                </a>
+            </div>
+        </div>
+
+        <!-- แถบปุ่มคำสั่ง SQL ตัวอย่าง (Preset Quick Queries) -->
+        <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                    ⚡ <span>คำสั่ง SQL ตัวอย่างยอดนิยม (คลิกเพื่อใส่คำสั่งทันที):</span>
+                </span>
+                <span class="text-[11px] text-gray-400 hidden sm:inline">กดรันด้วยปุ่มด้านล่าง หรือกด Ctrl + Enter</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+                <button onclick="loadPreset('SELECT * FROM ebooks ORDER BY price DESC;')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    📖 <span>หนังสือทั้งหมด (เรียงตามราคา)</span>
+                </button>
+                <button onclick="loadPreset('SELECT category_name, COUNT(*) AS total_books, AVG(price) AS avg_price, SUM(price) AS total_val FROM ebooks GROUP BY category_name;')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    📊 <span>สรุปตามหมวดหมู่ (GROUP BY, COUNT, AVG)</span>
+                </button>
+                <button onclick="loadPreset('SELECT * FROM orders WHERE status = \'pending\';')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    ⏳ <span>คำสั่งซื้อที่รอตรวจสอบ (WHERE)</span>
+                </button>
+                <button onclick="loadPreset('SELECT o.order_id, o.customer_name, o.total, o.status, i.book_title, i.price, i.quantity FROM orders o JOIN order_items i ON o.order_id = i.order_id;')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    🔗 <span>คำสั่งซื้อพร้อมรายการหนังสือ (INNER JOIN)</span>
+                </button>
+                <button onclick="loadPreset('SELECT username, name, email, role FROM users;')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    👥 <span>รายชื่อผู้ใช้งานและบทบาท (Users)</span>
+                </button>
+                <button onclick="loadPreset('SELECT * FROM ebooks WHERE price >= 350;')"
+                    class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
+                    🏷️ <span>หนังสือราคา ฿350 ขึ้นไป</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- เลย์เอาต์แบ่ง 2 ฝั่ง: กล่องโครงสร้างตาราง (ซ้าย) + พื้นที่พิมพ์ SQL และแสดงผล (ขวา) -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+
+            <!-- ฝั่งซ้าย: โครงสร้างตารางในฐานข้อมูล (Schema Explorer) -->
+            <div class="lg:col-span-1 bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100">
+                    <h2 class="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                        <span>🗄️</span> ตารางในระบบ (Tables)
+                    </h2>
+                    <span class="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold" id="tableCountBadge">
+                        5 ตาราง
+                    </span>
+                </div>
+
+                <p class="text-xs text-gray-500 leading-relaxed">
+                    คลิกที่ชื่อตารางเพื่อดูฟิลด์ หรือกดปุ่ม <strong>SELECT</strong> เพื่อดึงข้อมูลตัวอย่างทันที
+                </p>
+
+                <!-- รายการตาราง -->
+                <div class="space-y-3" id="tableSchemaList">
+                    <!-- ตาราง 1: ebooks -->
+                    <div class="border border-gray-200 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/30 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-blue-700 font-code flex items-center gap-1">
+                                📚 <span>ebooks</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-semibold" id="count-ebooks">
+                                    0 แถว
+                                </span>
+                                <button onclick="quickSelect('ebooks')" title="ดึงข้อมูลตารางนี้"
+                                    class="text-[10px] bg-blue-600 hover:bg-blue-700 text-white px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                                    SELECT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[11px] text-gray-500 font-code space-y-0.5 pl-2 border-l-2 border-blue-200">
+                            <div>• ebook_id <span class="text-gray-400">(INT, PK)</span></div>
+                            <div>• title <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• author_name <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• category_name <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• price <span class="text-gray-400">(DECIMAL)</span></div>
+                            <div>• description <span class="text-gray-400">(TEXT)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- ตาราง 2: orders -->
+                    <div class="border border-gray-200 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/30 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-emerald-700 font-code flex items-center gap-1">
+                                📋 <span>orders</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold" id="count-orders">
+                                    0 แถว
+                                </span>
+                                <button onclick="quickSelect('orders')" title="ดึงข้อมูลตารางนี้"
+                                    class="text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                                    SELECT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[11px] text-gray-500 font-code space-y-0.5 pl-2 border-l-2 border-emerald-200">
+                            <div>• order_id <span class="text-gray-400">(VARCHAR, PK)</span></div>
+                            <div>• customer_name <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• customer_email <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• total <span class="text-gray-400">(DECIMAL)</span></div>
+                            <div>• status <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• order_date <span class="text-gray-400">(DATETIME)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- ตาราง 3: order_items -->
+                    <div class="border border-gray-200 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/30 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-amber-700 font-code flex items-center gap-1">
+                                🛒 <span>order_items</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-semibold" id="count-order_items">
+                                    0 แถว
+                                </span>
+                                <button onclick="quickSelect('order_items')" title="ดึงข้อมูลตารางนี้"
+                                    class="text-[10px] bg-amber-600 hover:bg-amber-700 text-white px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                                    SELECT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[11px] text-gray-500 font-code space-y-0.5 pl-2 border-l-2 border-amber-200">
+                            <div>• item_id <span class="text-gray-400">(INT, PK)</span></div>
+                            <div>• order_id <span class="text-gray-400">(VARCHAR, FK)</span></div>
+                            <div>• ebook_id <span class="text-gray-400">(INT, FK)</span></div>
+                            <div>• book_title <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• price <span class="text-gray-400">(DECIMAL)</span></div>
+                            <div>• quantity <span class="text-gray-400">(INT)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- ตาราง 4: users -->
+                    <div class="border border-gray-200 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/30 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-purple-700 font-code flex items-center gap-1">
+                                👥 <span>users</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full font-semibold" id="count-users">
+                                    0 แถว
+                                </span>
+                                <button onclick="quickSelect('users')" title="ดึงข้อมูลตารางนี้"
+                                    class="text-[10px] bg-purple-600 hover:bg-purple-700 text-white px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                                    SELECT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[11px] text-gray-500 font-code space-y-0.5 pl-2 border-l-2 border-purple-200">
+                            <div>• username <span class="text-gray-400">(VARCHAR, PK)</span></div>
+                            <div>• name <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• email <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• role <span class="text-gray-400">(VARCHAR)</span></div>
+                        </div>
+                    </div>
+
+                    <!-- ตาราง 5: categories -->
+                    <div class="border border-gray-200 rounded-xl p-3 bg-slate-50/50 hover:bg-blue-50/30 transition">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-xs text-rose-700 font-code flex items-center gap-1">
+                                🏷️ <span>categories</span>
+                            </span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded-full font-semibold" id="count-categories">
+                                    0 แถว
+                                </span>
+                                <button onclick="quickSelect('categories')" title="ดึงข้อมูลตารางนี้"
+                                    class="text-[10px] bg-rose-600 hover:bg-rose-700 text-white px-2 py-0.5 rounded-md font-semibold cursor-pointer">
+                                    SELECT
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-[11px] text-gray-500 font-code space-y-0.5 pl-2 border-l-2 border-rose-200">
+                            <div>• category_id <span class="text-gray-400">(INT, PK)</span></div>
+                            <div>• category_name <span class="text-gray-400">(VARCHAR)</span></div>
+                            <div>• book_count <span class="text-gray-400">(INT)</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา: กล่องเขียน SQL + ปุ่มสั่งรัน + ตารางแสดงผลลัพธ์ -->
+            <div class="lg:col-span-3 space-y-6">
+
+                <!-- 1. กล่องเขียนคำสั่ง SQL (SQL Query Editor) -->
+                <div class="bg-gray-900 rounded-3xl shadow-xl overflow-hidden border border-gray-800">
+                    <!-- แถบด้านบนของกล่องโค้ด -->
+                    <div class="bg-gray-800/80 px-5 py-3 flex items-center justify-between border-b border-gray-700">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                            <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                            <span class="text-xs font-mono text-gray-300 ml-2 font-semibold">SQL Query Terminal</span>
+                        </div>
+                        <div class="flex items-center space-x-2 text-xs">
+                            <button onclick="clearEditor()" class="text-gray-400 hover:text-white px-2 py-1 rounded transition cursor-pointer" title="ล้างข้อความในกล่อง">
+                                🧹 ล้างคำสั่ง
+                            </button>
+                            <button onclick="copySQL()" class="text-gray-400 hover:text-white px-2 py-1 rounded transition cursor-pointer" title="คัดลอกคำสั่ง">
+                                📋 คัดลอก
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- กล่อง Textarea สำหรับเขียนคำสั่ง -->
+                    <div class="p-4">
+                        <textarea id="sqlInput" rows="6" spellcheck="false"
+                            placeholder="พิมพ์คำสั่ง SQL เช่น SELECT * FROM ebooks WHERE price > 300;"
+                            class="w-full bg-transparent text-emerald-400 font-code text-sm sm:text-base leading-relaxed focus:outline-none resize-y placeholder-gray-600"></textarea>
+                    </div>
+
+                    <!-- แถบปุ่มสั่งรันและคีย์ลัด -->
+                    <div class="bg-gray-950/60 px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-gray-800 text-xs">
+                        <div class="text-gray-400 font-mono flex items-center gap-1.5">
+                            <span>💡 คีย์ลัด:</span>
+                            <kbd class="bg-gray-800 text-gray-200 px-2 py-0.5 rounded border border-gray-700 text-[11px]">Ctrl</kbd>
+                            <span>+</span>
+                            <kbd class="bg-gray-800 text-gray-200 px-2 py-0.5 rounded border border-gray-700 text-[11px]">Enter</kbd>
+                            <span>เพื่อรันคำสั่งทันที</span>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <button onclick="executeSQL()" id="btnRunQuery"
+                                class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl shadow-lg hover:shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer">
+                                <span>🚀</span> <span>รันคำสั่ง SQL (Run Query)</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. กล่องแสดงผลลัพธ์ (Query Results Output) -->
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="p-5 border-b border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gray-50/50">
+                        <div>
+                            <h2 class="font-bold text-base text-gray-900 flex items-center gap-2">
+                                <span>📊</span> ผลลัพธ์จากการสืบค้น (Query Results)
+                            </h2>
+                            <p class="text-xs text-gray-500 mt-0.5" id="queryStatusText">
+                                กดปุ่ม "รันคำสั่ง SQL" เพื่อดึงข้อมูลจากตาราง
+                            </p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="exportResult('csv')" id="btnExportCsv" disabled
+                                class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 shadow-2xs opacity-50 cursor-not-allowed">
+                                📥 <span>ส่งออก CSV</span>
+                            </button>
+                            <button onclick="exportResult('json')" id="btnExportJson" disabled
+                                class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 shadow-2xs opacity-50 cursor-not-allowed">
+                                📋 <span>ส่งออก JSON</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- กล่องข้อความแจ้งเตือนข้อผิดพลาด (ซ่อนไว้ก่อน) -->
+                    <div id="errorBox" class="p-4 bg-red-50 border-b border-red-200 text-red-700 text-xs font-mono hidden">
+                        <div class="font-bold flex items-center gap-1.5 mb-1">
+                            <span>❌ SQL Syntax / Execution Error:</span>
+                        </div>
+                        <p id="errorMessage" class="leading-relaxed"></p>
+                    </div>
+
+                    <!-- ตารางแสดงข้อมูลผลลัพธ์ -->
+                    <div class="overflow-x-auto min-h-[220px]">
+                        <table class="w-full text-left border-collapse text-xs sm:text-sm font-sans" id="resultTable">
+                            <thead class="bg-gray-100 text-gray-700 font-semibold border-b border-gray-200" id="resultThead">
+                                <tr>
+                                    <th class="p-4 text-gray-400 font-normal text-center">ไม่มีข้อมูลผลลัพธ์</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-100 font-mono text-xs" id="resultTbody">
+                                <tr>
+                                    <td class="p-8 text-center text-gray-400 font-sans">
+                                        พิมพ์คำสั่ง SQL หรือเลือกคำสั่งตัวอย่างด้านบน แล้วกด <strong>รันคำสั่ง SQL</strong> เพื่อดูข้อมูล
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 3. ประวัติการรันคำสั่งล่าสุด (Query History) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
+                    <h3 class="font-bold text-xs text-gray-700 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <span>🕒</span> ประวัติการรันคำสั่งในเซสชันนี้ (Recent Query History)
+                    </h3>
+                    <div id="queryHistoryList" class="space-y-1.5 text-xs font-code">
+                        <span class="text-gray-400 font-sans text-xs">ยังไม่มีประวัติการรันคำสั่ง</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 3. ส่วนท้าย Footer -->
+    <footer class="bg-white border-t border-gray-200 py-6 text-center text-xs text-gray-500 mt-12">
+        <p>© 2026 E-Book Store Management Studio • Powered by Client-side In-Memory SQL Engine</p>
+    </footer>
+
+    <!-- จาวาสคริปต์ควบคุมการทำงานของ SQL Console -->
+    <script>
+        let currentQueryResult = null;
+        let queryHistory = [];
+
+        // ฟังก์ชันสร้างและซิงก์ข้อมูลจาก LocalStorage เข้าสู่ In-Memory Database (AlaSQL)
+        function refreshDatabase(showAlert = false) {
+            try {
+                // 1. ดึงข้อมูลหนังสือ (ebooks)
+                let books = [];
+                try {
+                    const rawBooks = localStorage.getItem('ebooks_store');
+                    if (rawBooks) books = JSON.parse(rawBooks);
+                } catch (e) {}
+
+                if (!books || books.length === 0) {
+                    // Fallback ค่าเริ่มต้น 8 เล่มตามหน้าเว็บไซต์
+                    books = [
+                        { id: 1, title: 'Lean Startup & Product Strategy', author: 'ณัฐพร นวัตกรรม', category: 'ธุรกิจ & การตลาด', price: 320.00, description: 'คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ' },
+                        { id: 2, title: 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', author: 'กวี ศรีสยาม', category: 'วรรณกรรม & นวนิยาย', price: 195.00, description: 'นวนิยายไซไฟแฟนตาซี การเดินทางข้ามห้วงกาลเวลาเพื่อกอบกู้ดวงดาวที่สาบสูญ' },
+                        { id: 3, title: 'Practical Generative AI for Developers', author: 'ดร. ธีรภัทร ปัญญาประดิษฐ์', category: 'วิทยาศาสตร์ข้อมูล & AI', price: 490.00, description: 'คู่มือนักพัฒนาในการเชื่อมต่อ LLM APIs, Prompt Engineering, RAG Architecture และการสร้าง AI Agents' },
+                        { id: 4, title: 'The Modern Growth Hacking & Digital Marketing', author: 'อนันต์ การตลาดดิจิทัล', category: 'ธุรกิจ & การตลาด', price: 390.00, description: 'กลยุทธ์ยิงแอดและสร้าง Funnel ปิดการขายอัตโนมัติ สำหรับธุรกิจออนไลน์ที่ต้องการสเกลยอดขาย' },
+                        { id: 5, title: 'จิตวิทยาการบริหารเวลา Focus & Productivity', author: 'พญ. ธิดารัตน์ สุขภาพจิต', category: 'พัฒนาตนเอง & จิตวิทยา', price: 250.00, description: 'เคล็ดลับทางประสาทวิทยาในการกำจัดนิสัยผลัดวันประกันพรุ่งและโฟกัสกับงานสำคัญอย่างเด็ดขาด' },
+                        { id: 6, title: 'คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน', author: 'ชัชวาล เศรษฐศาสตร์', category: 'การเงิน & การลงทุน', price: 290.00, description: 'เข้าใจการลดหย่อนภาษีอย่างถูกต้อง พร้อมกลยุทธ์สร้างอิสรภาพทางการเงินผ่านกองทุนรวมและหุ้นปันผล' },
+                        { id: 7, title: 'Full-Stack Web Development with Python & Modern Stack', author: 'อาจารย์ พรชัย เทคโนโลยี', category: 'เทคโนโลยี & การเขียนโปรแกรม', price: 420.00, description: 'สร้างเว็บแอปพลิเคชันระดับโปรดักชันด้วย Flask, RESTful API และฐานข้อมูล พร้อมการทำ Deployment' },
+                        { id: 8, title: 'Mastering Database Design & SQL', author: 'ดร. กิตติพงษ์ วิริยะกุล', category: 'เทคโนโลยี & การเขียนโปรแกรม', price: 299.00, description: 'เจาะลึกการออกแบบฐานข้อมูลเชิงสัมพันธ์ตั้งแต่ระดับพื้นฐาน Normalization 3NF จนถึงการ Optimize Query' }
+                    ];
+                }
+
+                // ปรับฟิลด์ให้เป็นมาตรฐาน SQL
+                const sqlBooks = books.map((b, idx) => ({
+                    ebook_id: Number(b.id || idx + 1),
+                    title: String(b.title || ''),
+                    author_name: String(b.author || 'ไม่ระบุ'),
+                    category_name: String(b.category || 'ทั่วไป'),
+                    price: parseFloat(b.price) || 0.00,
+                    description: String(b.description || '')
+                }));
+
+                // 2. ดึงข้อมูลคำสั่งซื้อ (orders และ order_items)
+                let orders = [];
+                try {
+                    const rawOrders = localStorage.getItem('orders_list');
+                    if (rawOrders) orders = JSON.parse(rawOrders);
+                } catch (e) {}
+
+                if (!orders || orders.length === 0) {
+                    orders = (typeof defaultOrders !== 'undefined') ? defaultOrders : [];
+                }
+
+                const sqlOrders = [];
+                const sqlOrderItems = [];
+                let itemIndex = 1;
+
+                orders.forEach(o => {
+                    sqlOrders.push({
+                        order_id: String(o.id),
+                        customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
+                        customer_email: String(o.customerEmail || 'user@bookcool.com'),
+                        total: parseFloat(o.total) || 0.00,
+                        status: String(o.status || 'pending'),
+                        order_date: String(o.date || '2026-10-01 12:00')
+                    });
+
+                    (o.items || []).forEach(item => {
+                        sqlOrderItems.push({
+                            item_id: itemIndex++,
+                            order_id: String(o.id),
+                            ebook_id: Number(item.id || 1),
+                            book_title: String(item.title || ''),
+                            price: parseFloat(item.price) || 0.00,
+                            quantity: Number(item.quantity || 1)
+                        });
+                    });
+                });
+
+                // 3. ดึงข้อมูลผู้ใช้งาน (users)
+                let users = [];
+                try {
+                    const rawUsers = localStorage.getItem('registered_users');
+                    if (rawUsers) users = JSON.parse(rawUsers);
+                } catch (e) {}
+
+                if (!users || users.length === 0) {
+                    users = (auth && auth.defaultAccounts) ? auth.defaultAccounts : [
+                        { username: 'admin', name: 'พลอยแสง (ผู้ดูแลระบบ)', email: 'admin@bookcool.com', role: 'admin' },
+                        { username: 'user', name: 'สมชาย สมาชิกนักอ่าน', email: 'user@bookcool.com', role: 'user' }
+                    ];
+                }
+
+                const sqlUsers = users.map(u => ({
+                    username: String(u.username),
+                    name: String(u.name || ''),
+                    email: String(u.email || ''),
+                    role: String(u.role || 'user')
+                }));
+
+                // 4. คำนวณตารางหมวดหมู่ (categories)
+                const categoryMap = {};
+                sqlBooks.forEach(b => {
+                    const cat = b.category_name || 'ทั่วไป';
+                    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+                });
+
+                const sqlCategories = Object.keys(categoryMap).map((catName, idx) => ({
+                    category_id: idx + 1,
+                    category_name: catName,
+                    book_count: categoryMap[catName]
+                }));
+
+                // บันทึกตารางลงใน AlaSQL In-Memory Database
+                if (window.alasql) {
+                    alasql('DROP TABLE IF EXISTS ebooks');
+                    alasql('DROP TABLE IF EXISTS orders');
+                    alasql('DROP TABLE IF EXISTS order_items');
+                    alasql('DROP TABLE IF EXISTS users');
+                    alasql('DROP TABLE IF EXISTS categories');
+
+                    alasql('CREATE TABLE ebooks');
+                    alasql('CREATE TABLE orders');
+                    alasql('CREATE TABLE order_items');
+                    alasql('CREATE TABLE users');
+                    alasql('CREATE TABLE categories');
+
+                    alasql.tables.ebooks.data = sqlBooks;
+                    alasql.tables.orders.data = sqlOrders;
+                    alasql.tables.order_items.data = sqlOrderItems;
+                    alasql.tables.users.data = sqlUsers;
+                    alasql.tables.categories.data = sqlCategories;
+                }
+
+                // เก็บตารางไว้ในตัวแปรสำรองสำหรับ fallback
+                window._fallbackDb = {
+                    ebooks: sqlBooks,
+                    orders: sqlOrders,
+                    order_items: sqlOrderItems,
+                    users: sqlUsers,
+                    categories: sqlCategories
+                };
+
+                // อัปเดตตัวเลขแถวในหน้าต่าง Schema Explorer
+                document.getElementById('count-ebooks').innerText = `${sqlBooks.length} แถว`;
+                document.getElementById('count-orders').innerText = `${sqlOrders.length} แถว`;
+                document.getElementById('count-order_items').innerText = `${sqlOrderItems.length} แถว`;
+                document.getElementById('count-users').innerText = `${sqlUsers.length} แถว`;
+                document.getElementById('count-categories').innerText = `${sqlCategories.length} แถว`;
+
+                if (showAlert) {
+                    alert(`✅ ซิงก์ข้อมูลจากระบบเรียบร้อยแล้ว!\n• หนังสือ: ${sqlBooks.length} เล่ม\n• คำสั่งซื้อ: ${sqlOrders.length} รายการ\n• สมาชิก: ${sqlUsers.length} คน\nพร้อมสำหรับการรันคำสั่ง SQL แล้วครับ`);
+                }
+            } catch (err) {
+                console.error("Error refreshing database", err);
+            }
+        }
+
+        // ฟังก์ชันเลือกคำสั่งด่วนจากตัวอย่าง
+        function loadPreset(sql) {
+            const editor = document.getElementById('sqlInput');
+            editor.value = sql;
+            executeSQL();
+        }
+
+        // ฟังก์ชันกดดูข้อมูลทั้งตาราง
+        function quickSelect(tableName) {
+            const editor = document.getElementById('sqlInput');
+            editor.value = `SELECT * FROM ${tableName};`;
+            executeSQL();
+        }
+
+        // ล้างกล่องเขียนคำสั่ง
+        function clearEditor() {
+            document.getElementById('sqlInput').value = '';
+            document.getElementById('sqlInput').focus();
+        }
+
+        // คัดลอกคำสั่ง SQL
+        function copySQL() {
+            const text = document.getElementById('sqlInput').value;
+            if (!text.trim()) return;
+            navigator.clipboard.writeText(text);
+            alert('📋 คัดลอกคำสั่ง SQL ลงใน Clipboard แล้ว');
+        }
+
+        // ฟังก์ชันประมวลผลคำสั่ง SQL
+        function executeSQL() {
+            const rawSql = document.getElementById('sqlInput').value.trim();
+            const errorBox = document.getElementById('errorBox');
+            const errorMsg = document.getElementById('errorMessage');
+            const statusText = document.getElementById('queryStatusText');
+            const btnCsv = document.getElementById('btnExportCsv');
+            const btnJson = document.getElementById('btnExportJson');
+
+            if (!rawSql) {
+                alert('⚠️ กรุณาพิมพ์คำสั่ง SQL ก่อนกดรันครับ');
+                return;
+            }
+
+            errorBox.classList.add('hidden');
+            const startTime = performance.now();
+
+            try {
+                let results = null;
+
+                if (window.alasql) {
+                    results = alasql(rawSql);
+                } else {
+                    // Fallback กรณีที่ CDN AlaSQL โหลดไม่ได้
+                    results = executeFallbackSQL(rawSql);
+                }
+
+                const endTime = performance.now();
+                const executionTime = (endTime - startTime).toFixed(2);
+
+                if (!Array.isArray(results)) {
+                    // กรณีเป็นคำสั่งที่ไม่คืนตาราง เช่น INSERT/UPDATE
+                    results = [{ message: "Command executed successfully", affectedRows: results || 1 }];
+                }
+
+                currentQueryResult = results;
+                renderResultTable(results);
+
+                statusText.innerHTML = `
+                    <span class="text-green-600 font-semibold">✓ ดำเนินการสำเร็จ:</span> 
+                    พบข้อมูลทั้งหมด <strong>${results.length}</strong> แถว 
+                    <span class="text-gray-400 font-mono">(ใช้เวลา ${executionTime} ms)</span>
+                `;
+
+                // เปิดใช้งานปุ่มส่งออก
+                btnCsv.disabled = false;
+                btnCsv.classList.remove('opacity-50', 'cursor-not-allowed');
+                btnJson.disabled = false;
+                btnJson.classList.remove('opacity-50', 'cursor-not-allowed');
+
+                // บันทึกประวัติคำสั่ง
+                addToHistory(rawSql, results.length);
+
+            } catch (err) {
+                console.error("SQL Error", err);
+                errorBox.classList.remove('hidden');
+                errorMsg.innerText = err.message || String(err);
+                statusText.innerHTML = `<span class="text-red-500 font-semibold">❌ คำสั่ง SQL ผิดพลาด กรุณาตรวจสอบไวยากรณ์</span>`;
+                
+                btnCsv.disabled = true;
+                btnCsv.classList.add('opacity-50', 'cursor-not-allowed');
+                btnJson.disabled = true;
+                btnJson.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        // ฟังก์ชันวาดตารางผลลัพธ์
+        function renderResultTable(data) {
+            const thead = document.getElementById('resultThead');
+            const tbody = document.getElementById('resultTbody');
+
+            if (!data || data.length === 0) {
+                thead.innerHTML = `<tr><th class="p-3 text-gray-500 font-semibold">ผลลัพธ์</th></tr>`;
+                tbody.innerHTML = `<tr><td class="p-8 text-center text-gray-400 font-sans">ไม่พบข้อมูลแถวใดที่ตรงกับเงื่อนไขในคำสั่ง SQL (0 rows returned)</td></tr>`;
+                return;
+            }
+
+            // ดึงชื่อคอลัมน์จากแถวแรก
+            const columns = Object.keys(data[0]);
+
+            // สร้าง Header
+            thead.innerHTML = `<tr>` + columns.map(col => `
+                <th class="p-3.5 text-gray-700 font-semibold text-xs tracking-wider border-r border-gray-200 last:border-r-0 whitespace-nowrap bg-gray-100 font-mono">
+                    ${col}
+                </th>
+            `).join('') + `</tr>`;
+
+            // สร้าง Data Rows
+            tbody.innerHTML = data.map((row, rowIdx) => {
+                const rowBg = rowIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50';
+                return `<tr class="${rowBg} hover:bg-blue-50/40 transition">` + columns.map(col => {
+                    let val = row[col];
+                    let displayVal = val;
+
+                    if (val === null || val === undefined) {
+                        displayVal = `<span class="text-gray-300 italic">NULL</span>`;
+                    } else if (typeof val === 'number') {
+                        if (col.includes('price') || col.includes('total') || col.includes('val')) {
+                            displayVal = `<span class="font-bold text-blue-600">฿${val.toFixed(2)}</span>`;
+                        } else {
+                            displayVal = `<span class="text-indigo-600 font-semibold">${val}</span>`;
+                        }
+                    } else if (col === 'status') {
+                        if (val === 'approved') {
+                            displayVal = `<span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold">✅ ยืนยันแล้ว</span>`;
+                        } else {
+                            displayVal = `<span class="bg-amber-100 text-amber-700 text-[10px] px-2 py-0.5 rounded-full font-bold">⏳ รอยืนยัน</span>`;
+                        }
+                    } else if (col === 'role') {
+                        if (val === 'admin') {
+                            displayVal = `<span class="bg-red-100 text-red-700 text-[10px] px-2 py-0.5 rounded-full font-bold">🛡️ ADMIN</span>`;
+                        } else {
+                            displayVal = `<span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">👤 USER</span>`;
+                        }
+                    }
+
+                    return `
+                        <td class="p-3 text-gray-700 border-r border-gray-100 last:border-r-0 whitespace-nowrap">
+                            ${displayVal}
+                        </td>
+                    `;
+                }).join('') + `</tr>`;
+            }).join('');
+        }
+
+        // เพิ่มคำสั่งลงในประวัติการรัน
+        function addToHistory(sql, rowCount) {
+            queryHistory.unshift({ sql: sql, count: rowCount, time: new Date().toLocaleTimeString('th-TH') });
+            if (queryHistory.length > 8) queryHistory.pop();
+
+            const container = document.getElementById('queryHistoryList');
+            container.innerHTML = queryHistory.map((item, idx) => `
+                <div class="flex items-center justify-between p-2 rounded-xl bg-slate-50 hover:bg-blue-50 border border-gray-100 transition cursor-pointer group"
+                    onclick="loadPreset(\`${item.sql.replace(/`/g, '\\`')}\`)">
+                    <div class="flex items-center gap-2 overflow-hidden mr-2">
+                        <span class="text-blue-500 font-bold">›</span>
+                        <span class="text-gray-800 line-clamp-1 group-hover:text-blue-600 transition">${item.sql}</span>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 text-[11px] text-gray-400">
+                        <span class="bg-gray-200/70 text-gray-600 px-1.5 py-0.2 rounded font-sans">${item.count} แถว</span>
+                        <span class="font-sans">${item.time}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ส่งออกผลลัพธ์เป็น CSV หรือ JSON
+        function exportResult(type) {
+            if (!currentQueryResult || currentQueryResult.length === 0) {
+                alert('ไม่มีข้อมูลสำหรับส่งออก');
+                return;
+            }
+
+            if (type === 'json') {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentQueryResult, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `sql_query_result_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+            } else if (type === 'csv') {
+                const cols = Object.keys(currentQueryResult[0]);
+                let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+                csvContent += cols.join(",") + "\r\n";
+
+                currentQueryResult.forEach(row => {
+                    const rowValues = cols.map(c => {
+                        let cell = row[c] === null || row[c] === undefined ? "" : String(row[c]);
+                        if (cell.includes(",") || cell.includes("\"") || cell.includes("\n")) {
+                            cell = `"${cell.replace(/"/g, '""')}"`;
+                        }
+                        return cell;
+                    });
+                    csvContent += rowValues.join(",") + "\r\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", `sql_query_result_${Date.now()}.csv`);
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+            }
+        }
+
+        // Fallback SQL Executor กรณีไม่สามารถโหลด AlaSQL ได้
+        function executeFallbackSQL(sql) {
+            const db = window._fallbackDb;
+            const cleaned = sql.trim().replace(/;$/, '');
+            const match = cleaned.match(/SELECT\s+(.+?)\s+FROM\s+([a-zA-Z0-9_]+)/i);
+
+            if (!match) {
+                throw new Error("ระบบ Fallback รองรับคำสั่งรูปแบบ SELECT ... FROM table [WHERE ...]");
+            }
+
+            const table = match[2].toLowerCase();
+            if (!db[table]) {
+                throw new Error(`ไม่พบตาราง "${table}" ในฐานข้อมูล`);
+            }
+
+            return [...db[table]];
+        }
+
+        // รองรับคีย์ลัด Ctrl + Enter เพื่อรันคำสั่งทันที
+        document.getElementById('sqlInput').addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                executeSQL();
+            }
+        });
+
+        // เริ่มต้นโหลดฐานข้อมูลและคำสั่งแรกอัตโนมัติ
+        function initConsole() {
+            refreshDatabase();
+            // ตั้งค่าคำสั่งแรกเป็นตัวอย่าง
+            const editor = document.getElementById('sqlInput');
+            if (editor && !editor.value) {
+                editor.value = "SELECT * FROM ebooks ORDER BY price DESC;";
+                setTimeout(() => executeSQL(), 100);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initConsole);
+        } else {
+            initConsole();
+        }
+    </script>
+</body>
+
+</html>

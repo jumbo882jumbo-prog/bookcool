@@ -14,6 +14,8 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -36,10 +38,8 @@
                 <a href="my-books.html" class="text-sm text-gray-300 hover:text-white flex items-center gap-1 transition">
                     📚 หนังสือของฉัน
                 </a>
-                <!-- ปุ่มลัดไปหลังบ้าน Admin -->
-                <a href="admin.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-gray-700 transition hidden sm:inline-block">
-                    ⚙️ หลังบ้าน
-                </a>
+                <!-- ส่วนแสดงสถานะล็อกอินและบัญชีผู้ใช้งาน (Auth Nav Container) -->
+                <div class="auth-nav-container flex items-center"></div>
             </div>
         </div>
     </header>
@@ -57,14 +57,38 @@
 
         <!-- กล่องสรุปรายการสินค้า -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 class="font-bold text-lg mb-4 text-gray-900">สรุปรายการคำสั่งซื้อ #ORD-2026-001</h2>
-            <div class="flex justify-between py-2 border-b border-gray-100 text-sm">
-                <span>ถอดรหัสวิญญาณแห่งดวงดาว (1 เล่ม)</span>
-                <span class="font-semibold">฿300.00</span>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="font-bold text-lg text-gray-900">สรุปรายการคำสั่งซื้อ</h2>
+                <span class="text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-lg" id="checkoutOrderBadge">
+                    คำสั่งซื้อใหม่
+                </span>
             </div>
-            <div class="flex justify-between py-3 text-base font-bold text-blue-600">
+            
+            <!-- รายการหนังสือที่จะสั่งซื้อ -->
+            <div id="checkoutItemsList" class="divide-y divide-gray-100 mb-4">
+                <!-- โหลดรายการสินค้าจากตะกร้า -->
+            </div>
+
+            <div class="flex justify-between py-3 text-base font-bold text-blue-600 border-t border-gray-200">
                 <span>ยอดชำระสุทธิ</span>
-                <span>฿300.00</span>
+                <span id="checkoutTotalAmount">฿0.00</span>
+            </div>
+        </div>
+
+        <!-- ข้อมูลผู้สั่งซื้อ -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <h2 class="font-bold text-lg mb-3 text-gray-900">👤 ข้อมูลผู้สั่งซื้อ</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">ชื่อ-นามสกุล / ผู้สั่งซื้อ</label>
+                    <input type="text" id="custName" required placeholder="ชื่อของคุณ"
+                        class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">อีเมลติดต่อ</label>
+                    <input type="email" id="custEmail" required placeholder="email@example.com"
+                        class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
             </div>
         </div>
 
@@ -78,9 +102,9 @@
 
             <div class="mb-6">
                 <label class="block text-sm font-medium mb-2 text-gray-700">อัปโหลดหลักฐานการชำระเงิน (สลิปโอนเงิน)</label>
-                <input type="file" id="slipInput"
+                <input type="file" id="slipInput" accept="image/*"
                     class="w-full text-sm border border-gray-300 rounded-xl p-2 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
-                <p class="text-xs text-gray-400 mt-1.5">*สำหรับทดสอบ สามารถกดปุ่มยืนยันได้ทันทีโดยไม่ต้องเลือกไฟล์สลิป</p>
+                <p class="text-xs text-gray-400 mt-1.5">*สำหรับทดสอบ สามารถกดปุ่มยืนยันได้ทันทีโดยไม่ต้องเลือกไฟล์สลิป (ระบบจะจำลองสลิปให้)</p>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-3">
@@ -90,7 +114,7 @@
                     ← ย้อนกลับ
                 </a>
                 <!-- ปุ่มยืนยันการชำระเงิน (Redirect ไป my-books.html) -->
-                <button type="button" onclick="submitPayment()"
+                <button type="button" id="btnSubmitPayment" onclick="submitPayment()"
                     class="w-full sm:w-2/3 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 rounded-xl shadow transition cursor-pointer flex items-center justify-center gap-2">
                     ✅ ยืนยันการชำระเงินและส่งตรวจสอบ
                 </button>
@@ -105,17 +129,124 @@
             <a href="cart.html" class="hover:text-blue-600">ตะกร้าสินค้า</a>
             <a href="checkout.html" class="hover:text-blue-600 font-semibold text-blue-600">ชำระเงิน</a>
             <a href="my-books.html" class="hover:text-blue-600">หนังสือของฉัน</a>
-            <a href="admin.html" class="hover:text-red-600">ระบบหลังบ้าน (Admin)</a>
+            <a href="admin.html" class="admin-link-nav hover:text-red-600">ระบบหลังบ้าน (Admin)</a>
         </div>
         <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
     </footer>
 
-    <!-- จาวาสคริปต์แจ้งเตือนและเปลี่ยนเส้นทาง (Redirect) ไปยังหน้าหนังสือของฉัน (my-books.html) -->
+    <!-- จาวาสคริปต์ควบคุมการชำระเงินและสร้างคำสั่งซื้อ -->
     <script>
+        let checkoutCart = [];
+        let checkoutTotal = 0;
+
+        function initCheckout() {
+            checkoutCart = cartManager.getCart();
+
+            // หากไม่มีสินค้าในตะกร้า แต่ผู้ใช้กดเข้ามา ให้ใส่เล่มตัวอย่างหรือแจ้งเตือน
+            if (!checkoutCart || checkoutCart.length === 0) {
+                // หากตะกร้าว่าง ให้ลองโหลดเล่มแรกเป็นค่าเริ่มต้นเพื่อความสะดวกในการทดสอบ
+                checkoutCart = [
+                    {
+                        id: "1",
+                        title: "Lean Startup & Product Strategy",
+                        author: "ณัฐพร นวัตกรรม",
+                        price: 320.00,
+                        cover: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=200",
+                        category: "ธุรกิจ & การตลาด",
+                        quantity: 1
+                    }
+                ];
+                cartManager.saveCart(checkoutCart);
+            }
+
+            renderCheckoutItems();
+            populateUserInfo();
+        }
+
+        function populateUserInfo() {
+            const user = auth.getCurrentUser();
+            const nameInput = document.getElementById('custName');
+            const emailInput = document.getElementById('custEmail');
+
+            if (user) {
+                if (nameInput) nameInput.value = user.name;
+                if (emailInput) emailInput.value = user.email || `${user.username}@bookcool.com`;
+            } else {
+                if (nameInput && !nameInput.value) nameInput.value = "สมชาย สมาชิกนักอ่าน";
+                if (emailInput && !emailInput.value) emailInput.value = "somchai@example.com";
+            }
+        }
+
+        function renderCheckoutItems() {
+            const container = document.getElementById('checkoutItemsList');
+            const totalEl = document.getElementById('checkoutTotalAmount');
+
+            checkoutTotal = 0;
+            container.innerHTML = checkoutCart.map(item => {
+                const qty = item.quantity || 1;
+                const sub = (parseFloat(item.price) || 0) * qty;
+                checkoutTotal += sub;
+
+                return `
+                <div class="flex items-center justify-between py-2.5 text-sm">
+                    <div class="flex items-center gap-3">
+                        <img src="${item.cover}" class="w-9 h-12 object-cover rounded shadow-2xs"
+                            onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100'">
+                        <div>
+                            <span class="font-medium text-gray-800">${item.title}</span>
+                            <span class="text-xs text-gray-400 block">จำนวน ${qty} เล่ม</span>
+                        </div>
+                    </div>
+                    <span class="font-semibold text-gray-800">฿${sub.toFixed(2)}</span>
+                </div>`;
+            }).join('');
+
+            totalEl.innerText = `฿${checkoutTotal.toFixed(2)}`;
+        }
+
         function submitPayment() {
-            alert('🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\nคำสั่งซื้อของคุณอยู่ในสถานะ "รอการตรวจสอบ" จากผู้ดูแลระบบ\nระบบจะพาท่านไปยังหน้า "หนังสือของฉัน" เพื่อตรวจสอบสถานะคำสั่งซื้อ');
-            // ทำการ Redirect ไปยังหน้าหนังสือของฉัน (my-books.html)
-            window.location.href = 'my-books.html';
+            const btn = document.getElementById('btnSubmitPayment');
+            const name = document.getElementById('custName').value.trim() || 'ลูกค้าทั่วไป';
+            const email = document.getElementById('custEmail').value.trim() || 'customer@example.com';
+            const currentUser = auth.getCurrentUser();
+
+            const customerInfo = {
+                name: name,
+                email: email,
+                username: currentUser ? currentUser.username : 'customer'
+            };
+
+            const fileInput = document.getElementById('slipInput');
+            
+            function finishOrder(slipDataUrl) {
+                // 1. สร้างคำสั่งซื้อใหม่และบันทึกลงในระบบ localStorage (orders_list)
+                const newOrder = orderManager.createOrder(customerInfo, checkoutCart, checkoutTotal, slipDataUrl);
+
+                // 2. เคลียร์ตะกร้าสินค้า
+                cartManager.clearCart();
+
+                // 3. แจ้งเตือนลูกค้า
+                alert(`🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\nรหัสคำสั่งซื้อ: #${newOrder.id}\nยอดชำระ: ฿${newOrder.total.toFixed(2)}\nสถานะ: ⏳ "รอการตรวจสอบจากผู้ดูแลระบบ"\n\nคำสั่งซื้อถูกส่งไปยังระบบหลังบ้าน (Admin) เรียบร้อยแล้ว เพื่อรอแอดมินกดยืนยันคำสั่งซื้อครับ`);
+
+                // 4. ไปยังหน้าหนังสือของฉัน
+                window.location.href = `my-books.html?newOrder=${encodeURIComponent(newOrder.id)}`;
+            }
+
+            if (fileInput && fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    finishOrder(e.target.result);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                finishOrder(null);
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCheckout);
+        } else {
+            initCheckout();
         }
     </script>
 </body>

@@ -14,6 +14,8 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -39,9 +41,8 @@
                 <a href="my-books.html" class="text-blue-400 font-semibold flex items-center gap-1 border-b-2 border-blue-400 pb-0.5">
                     📚 หนังสือของฉัน
                 </a>
-                <a href="admin.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-gray-700 transition hidden sm:inline-block">
-                    ⚙️ หลังบ้าน
-                </a>
+                <!-- ส่วนแสดงสถานะล็อกอินและบัญชีผู้ใช้งาน (Auth Nav Container) -->
+                <div class="auth-nav-container flex items-center"></div>
             </div>
         </div>
     </header>
@@ -50,19 +51,19 @@
     <main class="max-w-6xl mx-auto px-4 py-10 w-full flex-grow">
 
         <!-- กล่องแจ้งเตือนคำสั่งซื้อล่าสุด (แสดงเมื่อเพิ่งสั่งซื้อเสร็จ) -->
-        <div id="newOrderBanner" class="bg-green-50 border border-green-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+        <div id="newOrderBanner" class="bg-green-50 border border-green-200 rounded-2xl p-4 sm:p-5 mb-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm hidden">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 text-xl font-bold flex-shrink-0">
                     ✓
                 </div>
                 <div>
                     <h3 class="font-bold text-green-900 text-base">ระบบได้รับคำสั่งซื้อและหลักฐานการชำระเงินของคุณแล้ว!</h3>
-                    <p class="text-xs sm:text-sm text-green-700 mt-0.5">
-                        คำสั่งซื้อ <strong>#ORD-2026-001</strong> กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะสามารถดาวน์โหลดไฟล์ได้ทันที
+                    <p class="text-xs sm:text-sm text-green-700 mt-0.5" id="bannerOrderText">
+                        คำสั่งซื้อ กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะสามารถดาวน์โหลดไฟล์ได้ทันที
                     </p>
                 </div>
             </div>
-            <a href="admin.html" class="text-xs bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl transition whitespace-nowrap shadow-sm">
+            <a href="admin.html" class="admin-link-nav admin-only-control text-xs bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 rounded-xl transition whitespace-nowrap shadow-sm">
                 ⚙️ ไปหน้า Admin เพื่อกดอนุมัติสลิป →
             </a>
         </div>
@@ -77,80 +78,14 @@
                     รายการหนังสือทั้งหมดที่คุณสั่งซื้อ เมื่อสถานะเปลี่ยนเป็น "ชำระเงินแล้ว" จะสามารถกดดาวน์โหลดไฟล์ PDF / EPUB ได้ทันที
                 </p>
             </div>
-            <a href="index.html" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition inline-flex items-center justify-center gap-2 shadow-sm">
+            <a href="index.html#bookSection" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm px-4 py-2.5 rounded-xl transition inline-flex items-center justify-center gap-2 shadow-sm">
                 + เลือกซื้อหนังสือเพิ่ม
             </a>
         </div>
 
-        <!-- รายการหนังสือที่ซื้อแล้ว (Grid Layout) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-            <!-- เล่มที่ 1: สถานะอนุมัติแล้ว (ดาวน์โหลดได้) -->
-            <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center">
-                <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=250"
-                    alt="Data Analytics with SQL" class="w-28 h-36 object-cover rounded-xl shadow flex-shrink-0">
-                <div class="flex-1 w-full">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">
-                            ✅ ชำระเงินแล้ว / พร้อมดาวน์โหลด
-                        </span>
-                        <span class="text-xs text-gray-400 font-mono">#ORD-2026-002</span>
-                    </div>
-                    <h3 class="font-bold text-base text-gray-900 mb-1">Data Analytics with SQL & Business</h3>
-                    <p class="text-xs text-gray-500 mb-4">ผู้แต่ง: ดร.สมชาย ปัญญาชัย • ยอดเงิน: ฿380.00</p>
-                    
-                    <button onclick="downloadBook('Data Analytics with SQL & Business', 'PDF')"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-                        📥 ดาวน์โหลด E-Book (PDF / EPUB)
-                    </button>
-                </div>
-            </div>
-
-            <!-- เล่มที่ 2: สถานะกำลังรอแอดมินตรวจสอบสลิป (เพิ่งสั่งซื้อ) -->
-            <div class="bg-white rounded-2xl border border-amber-200 p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center bg-amber-50/30">
-                <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=250"
-                    alt="ถอดรหัสวิญญาณแห่งดวงดาว" class="w-28 h-36 object-cover rounded-xl shadow flex-shrink-0">
-                <div class="flex-1 w-full">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-semibold">
-                            ⏳ รอแอดมินตรวจสอบสลิป
-                        </span>
-                        <span class="text-xs text-amber-600 font-mono font-medium">#ORD-2026-001</span>
-                    </div>
-                    <h3 class="font-bold text-base text-gray-900 mb-1">ถอดรหัสวิญญาณแห่งดวงดาว</h3>
-                    <p class="text-xs text-gray-500 mb-3">ผู้แต่ง: กวิน ทัศนีย์ • ยอดเงิน: ฿300.00</p>
-                    <p class="text-xs text-amber-600 mb-3 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                        💡 กำลังตรวจสอบยอดเงิน เมื่อแอดมินกดอนุมัติ ปุ่มดาวน์โหลดจะเปิดใช้งานอัตโนมัติ
-                    </p>
-                    
-                    <button disabled
-                        class="w-full bg-gray-200 text-gray-400 text-xs font-semibold py-2.5 px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
-                        🔒 ยังไม่เปิดให้ดาวน์โหลด (รอแอดมินอนุมัติ)
-                    </button>
-                </div>
-            </div>
-
-            <!-- เล่มที่ 3: สถานะอนุมัติแล้ว (ตัวอย่างเพิ่มเติม) -->
-            <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center">
-                <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&q=80&w=250"
-                    alt="Clean Architecture" class="w-28 h-36 object-cover rounded-xl shadow flex-shrink-0">
-                <div class="flex-1 w-full">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">
-                            ✅ ชำระเงินแล้ว / พร้อมดาวน์โหลด
-                        </span>
-                        <span class="text-xs text-gray-400 font-mono">#ORD-2026-000</span>
-                    </div>
-                    <h3 class="font-bold text-base text-gray-900 mb-1">Clean Architecture & Design Patterns</h3>
-                    <p class="text-xs text-gray-500 mb-4">ผู้แต่ง: ทีมวิศวกรซอฟต์แวร์ • ยอดเงิน: ฿450.00</p>
-                    
-                    <button onclick="downloadBook('Clean Architecture & Design Patterns', 'EPUB')"
-                        class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-                        📥 ดาวน์โหลด E-Book (PDF / EPUB)
-                    </button>
-                </div>
-            </div>
-
+        <!-- รายการหนังสือที่ซื้อแล้ว (Dynamic Grid Layout) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="myBooksGrid">
+            <!-- โหลดรายการหนังสือจาก orderManager ด้วย JavaScript -->
         </div>
 
     </main>
@@ -163,17 +98,120 @@
                 <a href="index.html#bookSection" class="hover:text-blue-600 transition">📖 ร้านค้า</a>
                 <a href="cart.html" class="hover:text-blue-600 transition">🛒 ตะกร้าสินค้า</a>
                 <a href="my-books.html" class="hover:text-blue-600 font-semibold text-blue-600 transition">📚 หนังสือของฉัน</a>
-                <a href="admin.html" class="text-red-600 hover:text-red-700 transition font-semibold">⚙️ จัดการระบบ (Admin)</a>
+                <a href="admin.html" class="admin-link-nav text-red-600 hover:text-red-700 transition font-semibold">⚙️ จัดการระบบ (Admin)</a>
             </div>
             <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
         </div>
     </footer>
 
-    <!-- จาวาสคริปต์จำลองการกดดาวน์โหลด -->
+    <!-- จาวาสคริปต์จำลองการกดดาวน์โหลด และโหลดข้อมูลหนังสือจากคำสั่งซื้อ -->
     <script>
         function downloadBook(bookTitle, format) {
             alert(`🎉 เริ่มต้นดาวน์โหลดไฟล์ E-Book:\n"${bookTitle}"\nรูปแบบไฟล์: ${format}\n\nไฟล์จำลองเริ่มการดาวน์โหลดลงในเครื่องของคุณเรียบร้อยแล้ว!`);
         }
+
+        function renderMyBooks() {
+            const grid = document.getElementById('myBooksGrid');
+            const banner = document.getElementById('newOrderBanner');
+            const bannerText = document.getElementById('bannerOrderText');
+            
+            const orders = orderManager.getOrders();
+            const urlParams = new URLSearchParams(window.location.search);
+            const newlyCreatedOrderId = urlParams.get('newOrder');
+
+            // จัดการแบนเนอร์แจ้งเตือนคำสั่งซื้อล่าสุด
+            const pendingOrders = orders.filter(o => o.status === 'pending');
+            if (newlyCreatedOrderId || pendingOrders.length > 0) {
+                const targetOrder = orders.find(o => o.id === newlyCreatedOrderId) || pendingOrders[0];
+                if (banner && targetOrder) {
+                    banner.classList.remove('hidden');
+                    if (bannerText) {
+                        const itemsNames = (targetOrder.items || []).map(i => i.title).join(', ');
+                        bannerText.innerHTML = `คำสั่งซื้อ <strong>#${targetOrder.id}</strong> (${itemsNames}) กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะสามารถดาวน์โหลดไฟล์ได้ทันที`;
+                    }
+                }
+            } else {
+                if (banner) banner.classList.add('hidden');
+            }
+
+            if (!orders || orders.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
+                        <div class="text-5xl mb-3">📚</div>
+                        <h3 class="text-lg font-bold text-gray-800">คุณยังไม่มีหนังสือในคลังหนังสือ</h3>
+                        <p class="text-xs text-gray-500 mt-1 mb-6">เลือกซื้อ E-Book คุณภาพแล้วกลับมาเปิดอ่านหรือดาวน์โหลดได้ที่นี่</p>
+                        <a href="index.html#bookSection" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-6 py-3 rounded-xl shadow transition">
+                            📖 เลือกซื้อหนังสือหน้าร้าน
+                        </a>
+                    </div>
+                `;
+                return;
+            }
+
+            // แตกรายการหนังสือจากแต่ละคำสั่งซื้อ
+            let htmlCards = [];
+            orders.forEach(order => {
+                const isApproved = order.status === 'approved';
+                const statusBadge = isApproved
+                    ? `<span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">
+                         ✅ ชำระเงินแล้ว / พร้อมดาวน์โหลด
+                       </span>`
+                    : `<span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-semibold">
+                         ⏳ รอแอดมินตรวจสอบสลิป
+                       </span>`;
+
+                const cardBg = isApproved ? 'bg-white border-gray-200' : 'bg-amber-50/20 border-amber-200';
+
+                (order.items || []).forEach(item => {
+                    const downloadBtn = isApproved
+                        ? `<button onclick="downloadBook('${item.title}', 'PDF / EPUB')"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                                📥 ดาวน์โหลด E-Book (PDF / EPUB)
+                           </button>`
+                        : `<button disabled
+                                class="w-full bg-gray-200 text-gray-400 text-xs font-semibold py-2.5 px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
+                                🔒 ยังไม่เปิดให้ดาวน์โหลด (รอแอดมินอนุมัติ)
+                           </button>`;
+
+                    const pendingNote = !isApproved ? `
+                        <p class="text-xs text-amber-600 mb-3 bg-amber-50 p-2 rounded-lg border border-amber-200">
+                            💡 กำลังตรวจสอบยอดเงิน เมื่อแอดมินกดยืนยัน ปุ่มดาวน์โหลดจะเปิดใช้งานอัตโนมัติ
+                        </p>
+                    ` : '';
+
+                    htmlCards.push(`
+                    <div class="${cardBg} rounded-2xl border p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center">
+                        <img src="${item.cover}"
+                            alt="${item.title}" class="w-28 h-36 object-cover rounded-xl shadow flex-shrink-0"
+                            onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=250'">
+                        <div class="flex-1 w-full">
+                            <div class="flex items-center justify-between mb-2">
+                                ${statusBadge}
+                                <span class="text-xs font-mono ${isApproved ? 'text-gray-400' : 'text-amber-600 font-medium'}">#${order.id}</span>
+                            </div>
+                            <h3 class="font-bold text-base text-gray-900 mb-1">${item.title}</h3>
+                            <p class="text-xs text-gray-500 mb-3">ผู้แต่ง: ${item.author || 'ไม่ระบุ'} • ยอดเงิน: ฿${(parseFloat(item.price) || 0).toFixed(2)}</p>
+                            ${pendingNote}
+                            ${downloadBtn}
+                        </div>
+                    </div>`);
+                });
+            });
+
+            grid.innerHTML = htmlCards.join('');
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderMyBooks);
+        } else {
+            renderMyBooks();
+        }
+
+        window.addEventListener('pageshow', renderMyBooks);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'orders_list') renderMyBooks();
+        });
+        window.addEventListener('ordersUpdated', renderMyBooks);
     </script>
 </body>
 

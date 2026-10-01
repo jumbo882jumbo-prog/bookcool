@@ -14,6 +14,11 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- ระบบตรวจสอบสิทธิ์ Admin -->
+    <script src="auth.js"></script>
+    <script>
+        auth.protectAdminPage();
+    </script>
 </head>
 
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
@@ -23,7 +28,8 @@
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <div class="flex items-center space-x-3">
                 <span class="bg-red-600 text-white px-2.5 py-1 rounded font-bold text-xs">ADMIN</span>
-                <a href="admin.html" class="font-bold text-lg hover:text-gray-200 transition">E-Book Store Management</a>
+                <a href="admin.html" class="font-bold text-lg hover:text-gray-200 transition">E-Book Store
+                    Management</a>
             </div>
 
             <!-- เมนูระบบหลังบ้าน -->
@@ -40,19 +46,20 @@
                     📊 <span class="hidden md:inline">รายงานวิเคราะห์</span>
                 </a>
 
-                <!-- เมนู 3: ไปที่หน้าร้าน -->
+                <!-- เมนู 3: คำสั่ง SQL -->
+                <a href="sql-console.html"
+                    class="text-gray-300 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition flex items-center gap-1.5">
+                    💻 <span class="hidden md:inline">คำสั่ง SQL</span>
+                </a>
+
+                <!-- เมนู 4: ไปที่หน้าร้าน -->
                 <a href="index.html"
                     class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 transition flex items-center gap-1.5">
                     🌐 <span class="hidden sm:inline">หน้าร้านค้า</span>
                 </a>
 
-                <!-- ผู้ใช้งาน Admin -->
-                <div class="flex items-center space-x-2 border-l border-gray-700 pl-3 sm:pl-4">
-                    <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center font-bold text-white text-xs">
-                        พล
-                    </div>
-                    <span class="hidden lg:inline text-xs text-gray-300">พลอยแสง (Admin)</span>
-                </div>
+                <!-- ผู้ใช้งาน Admin และปุ่มออกจากระบบ -->
+                <div class="auth-nav-container flex items-center"></div>
             </div>
         </div>
     </header>
@@ -68,12 +75,12 @@
                     <span>/</span>
                     <a href="admin.html" class="hover:text-blue-600 transition">จัดการหนังสือ</a>
                     <span>/</span>
-                    <span class="text-gray-800 font-semibold">เพิ่ม E-Book เล่มใหม่</span>
+                    <span id="formBreadcrumb" class="text-gray-800 font-semibold">เพิ่ม E-Book เล่มใหม่</span>
                 </nav>
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
+                <h1 id="formPageTitle" class="text-2xl sm:text-3xl font-bold text-gray-900 flex items-center gap-2">
                     <span>📖</span> เพิ่ม E-Book เล่มใหม่เข้าสู่ร้านค้า
                 </h1>
-                <p class="text-xs sm:text-sm text-gray-500 mt-1">
+                <p id="formPageSubtitle" class="text-xs sm:text-sm text-gray-500 mt-1">
                     กรอกข้อมูลรายละเอียดหนังสือ อัปโหลดภาพปก และไฟล์ดิจิทัล (PDF/EPUB) เพื่อวางจำหน่ายบนหน้าเว็บ
                 </p>
             </div>
@@ -81,7 +88,7 @@
             <!-- ปุ่มย้อนกลับ -->
             <a href="admin.html"
                 class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs sm:text-sm font-medium px-4 py-2 rounded-xl transition flex items-center gap-1.5 self-start sm:self-auto shadow-sm">
-                ← กลับหน้าจัดการคำสั่งซื้อ
+                ← กลับหน้าจัดการหลังบ้าน
             </a>
         </div>
 
@@ -109,8 +116,7 @@
                         <label for="authorName" class="block text-sm font-semibold text-gray-800 mb-1.5">
                             ผู้แต่ง / ผู้เขียน (Author Name) <span class="text-red-500">*</span>
                         </label>
-                        <input type="text" id="authorName" required
-                            placeholder="เช่น ดร.วิศวกรรม ซอฟต์แวร์"
+                        <input type="text" id="authorName" required placeholder="เช่น ดร.วิศวกรรม ซอฟต์แวร์"
                             class="w-full text-sm border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50/50">
                     </div>
 
@@ -122,10 +128,14 @@
                         <select id="categoryName" required
                             class="w-full text-sm border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50/50 cursor-pointer">
                             <option value="" disabled selected>-- เลือกหมวดหมู่หนังสือ --</option>
-                            <option value="พัฒนาตนเอง">พัฒนาตนเอง & จิตวิทยา</option>
-                            <option value="Data & AI">วิทยาศาสตร์ข้อมูล & AI (Data & AI)</option>
-                            <option value="ธุรกิจ & การตลาด">ธุรกิจ & การตลาด (Business)</option>
-                            <option value="Programming">เทคโนโลยี & การเขียนโปรแกรม</option>
+                            <option value="ธุรกิจ & การตลาด">ธุรกิจ & การตลาด (Business & Marketing)</option>
+                            <option value="วรรณกรรม & นวนิยาย">วรรณกรรม & นวนิยาย (Literature & Fiction)</option>
+                            <option value="วิทยาศาสตร์ข้อมูล & AI">วิทยาศาสตร์ข้อมูล & AI (Data Science & AI)</option>
+                            <option value="พัฒนาตนเอง & จิตวิทยา">พัฒนาตนเอง & จิตวิทยา (Self Development & Psychology)
+                            </option>
+                            <option value="การเงิน & การลงทุน">การเงิน & การลงทุน (Finance & Investment)</option>
+                            <option value="เทคโนโลยี & การเขียนโปรแกรม">เทคโนโลยี & การเขียนโปรแกรม (Technology &
+                                Programming)</option>
                         </select>
                     </div>
                 </div>
@@ -136,14 +146,15 @@
                         ราคาจำหน่าย (Price - บาท THB) <span class="text-red-500">*</span>
                     </label>
                     <div class="relative rounded-xl shadow-sm max-w-xs">
-                        <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500 font-bold">
+                        <div
+                            class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-gray-500 font-bold">
                             ฿
                         </div>
-                        <input type="number" id="bookPrice" min="0" step="0.01" required
-                            placeholder="350.00"
+                        <input type="number" id="bookPrice" min="0" step="0.01" required placeholder="350.00"
                             class="w-full text-sm border border-gray-300 rounded-xl pl-8 pr-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50/50 font-semibold text-gray-900">
                     </div>
-                    <p class="text-[11px] text-gray-400 mt-1">ราคาเป็นสกุลเงินบาท (THB) รวมภาษีมูลค่าเพิ่มเรียบร้อยแล้ว</p>
+                    <p class="text-[11px] text-gray-400 mt-1">ราคาเป็นสกุลเงินบาท (THB) รวมภาษีมูลค่าเพิ่มเรียบร้อยแล้ว
+                    </p>
                 </div>
 
                 <!-- 4. คำโปรยหรือรายละเอียดย่อ (Description) -->
@@ -154,23 +165,67 @@
                     <textarea id="bookDescription" rows="4" required
                         placeholder="สรุปเนื้อหาสำคัญ จุดเด่นของหนังสือ และประโยชน์ที่ผู้อ่านจะได้รับ..."
                         class="w-full text-sm border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-gray-50/50 leading-relaxed"></textarea>
-                    <p class="text-[11px] text-gray-400 mt-1">ข้อความนี้จะแสดงในการ์ดหน้าร้านและหน้าแสดงรายละเอียดหนังสือ</p>
+                    <p class="text-[11px] text-gray-400 mt-1">
+                        ข้อความนี้จะแสดงในการ์ดหน้าร้านและหน้าแสดงรายละเอียดหนังสือ</p>
                 </div>
 
                 <!-- 5. อัปโหลดรูปภาพปกหนังสือ (Cover Image Upload) -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-800 mb-1.5">
-                        อัปโหลดรูปภาพปกหนังสือ (Cover Image) <span class="text-red-500">*</span>
+                        รูปภาพปกหนังสือ (Cover Image) <span class="text-red-500">*</span>
                     </label>
-                    <div class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-2xl p-5 text-center transition bg-slate-50/60">
-                        <div class="flex flex-col items-center">
-                            <span class="text-3xl mb-2">🖼️</span>
-                            <p class="text-xs text-gray-600 font-medium mb-1">
-                                เลือกรูปภาพหน้าปก (.JPG, .PNG, .WebP)
-                            </p>
-                            <p class="text-[11px] text-gray-400 mb-3">ขนาดแนะนำอัตราส่วน 3:4 (เช่น 600x800 พิกเซล)</p>
-                            <input type="file" id="coverImageInput" accept="image/*" onchange="handleImagePreview(event)"
-                                class="text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+
+                    <!-- กล่องเลือกวิธีใส่รูปภาพ -->
+                    <div class="bg-slate-50/70 border border-gray-200 rounded-2xl p-4 space-y-4">
+                        <!-- ตัวเลือก 1: อัปโหลดไฟล์จากเครื่อง (พร้อมระบบบีบอัดอัตโนมัติ) -->
+                        <div
+                            class="border-2 border-dashed border-gray-300 hover:border-blue-400 rounded-xl p-4 text-center transition bg-white">
+                            <div class="flex flex-col items-center">
+                                <span class="text-2xl mb-1">🖼️</span>
+                                <p class="text-xs text-gray-700 font-semibold mb-0.5">
+                                    เลือกไฟล์รูปภาพจากเครื่อง (.JPG, .PNG, .WebP)
+                                </p>
+                                <p class="text-[11px] text-gray-400 mb-2.5">ระบบจะปรับขนาดและบีบอัดภาพให้อัตโนมัติ
+                                    ป้องกันพื้นที่เต็ม</p>
+                                <input type="file" id="coverImageInput" accept="image/*"
+                                    onchange="handleImagePreview(event)"
+                                    class="text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                            </div>
+                        </div>
+
+                        <!-- ตัวเลือก 2: วางลิงก์รูปภาพ (Image URL) -->
+                        <div>
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-xs font-semibold text-gray-700">หรือวางลิงก์รูปภาพ (Image URL):</span>
+                            </div>
+                            <input type="url" id="coverUrlInput" oninput="handleCoverUrlInput(this.value)"
+                                placeholder="https://images.unsplash.com/photo-..."
+                                class="w-full text-xs border border-gray-300 rounded-xl px-3.5 py-2.5 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- ตัวเลือก 3: ใช้รูปภาพมาตรฐานตามหมวดหมู่ -->
+                        <div
+                            class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/60 text-xs">
+                            <span class="text-gray-500 text-[11px]">หรือกดปุ่มเพื่อใช้ภาพมาตรฐาน:</span>
+                            <div class="flex flex-wrap gap-1.5">
+                                <button type="button" onclick="useCategoryCover('พัฒนาตนเอง')"
+                                    class="px-2 py-1 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-[11px] text-gray-600 hover:text-blue-600 transition">💡
+                                    พัฒนาตนเอง</button>
+                                <button type="button" onclick="useCategoryCover('Data & AI')"
+                                    class="px-2 py-1 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-[11px] text-gray-600 hover:text-blue-600 transition">🤖
+                                    Data & AI</button>
+                                <button type="button" onclick="useCategoryCover('ธุรกิจ & การตลาด')"
+                                    class="px-2 py-1 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-[11px] text-gray-600 hover:text-blue-600 transition">📈
+                                    ธุรกิจ</button>
+                                <button type="button" onclick="useCategoryCover('Programming')"
+                                    class="px-2 py-1 bg-white hover:bg-blue-50 border border-gray-200 rounded-lg text-[11px] text-gray-600 hover:text-blue-600 transition">💻
+                                    Coding</button>
+                            </div>
+                        </div>
+
+                        <!-- แสดงสถานะภาพที่เลือก -->
+                        <div id="uploadStatus" class="text-[11px] text-gray-500 pt-1">
+                            ℹ️ หากไม่เลือกรูป ระบบจะใช้ภาพมาตรฐานตามหมวดหมู่ให้อัตโนมัติ
                         </div>
                     </div>
                 </div>
@@ -186,7 +241,8 @@
                                 <span class="text-2xl">📁</span>
                                 <div>
                                     <p class="text-xs font-semibold text-gray-800">ไฟล์ต้นฉบับสำหรับลูกค้าดาวน์โหลด</p>
-                                    <p class="text-[11px] text-gray-400">รองรับนามสกุล .PDF หรือ .EPUB (ขนาดไม่เกิน 50 MB)</p>
+                                    <p class="text-[11px] text-gray-400">รองรับนามสกุล .PDF หรือ .EPUB (ขนาดไม่เกิน 50
+                                        MB)</p>
                                 </div>
                             </div>
                             <input type="file" id="digitalFileInput" accept=".pdf,.epub"
@@ -198,9 +254,9 @@
                 <!-- 7. ปุ่มดำเนินการ (Action Buttons) -->
                 <div class="pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-center gap-3">
                     <!-- ปุ่มบันทึก -->
-                    <button type="submit"
+                    <button type="submit" id="submitBtn"
                         class="w-full sm:w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3.5 px-6 rounded-2xl transition flex items-center justify-center gap-2 shadow-md hover:shadow-lg cursor-pointer">
-                        <span>💾</span> บันทึกและเพิ่มหนังสือเข้าสู่ระบบ
+                        <span>💾</span> <span id="submitBtnText">บันทึกและเพิ่มหนังสือเข้าสู่ระบบ</span>
                     </button>
 
                     <!-- ปุ่มยกเลิก -->
@@ -217,7 +273,8 @@
                 <div class="sticky top-24 space-y-4">
                     <div class="bg-white rounded-3xl border border-gray-200 p-5 shadow-sm">
                         <div class="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
-                            <h3 class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <h3
+                                class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
                                 <span>👁️</span> ตัวอย่างการ์ดหน้าร้าน (Live Preview)
                             </h3>
                             <span class="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">
@@ -226,7 +283,8 @@
                         </div>
 
                         <!-- การ์ดตัวอย่างหนังสือตามดีไซน์หน้าร้าน index.html -->
-                        <div class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
+                        <div
+                            class="book-card bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition flex flex-col">
                             <div class="h-52 bg-gray-100 overflow-hidden relative">
                                 <img id="previewCover"
                                     src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400"
@@ -244,7 +302,8 @@
                                     <p id="previewAuthor" class="text-xs text-gray-500 mb-2">
                                         โดย ผู้แต่ง
                                     </p>
-                                    <p id="previewDescription" class="text-xs text-gray-600 line-clamp-2 mb-4 leading-relaxed">
+                                    <p id="previewDescription"
+                                        class="text-xs text-gray-600 line-clamp-2 mb-4 leading-relaxed">
                                         คำโปรยและรายละเอียดย่อจะแสดงตัวอย่างในส่วนนี้แบบอัตโนมัติเมื่อพิมพ์ข้อมูล...
                                     </p>
                                 </div>
@@ -258,8 +317,10 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-[11px] text-blue-700 leading-relaxed">
-                            💡 <strong>คำแนะนำ:</strong> เมื่อกดบันทึก ข้อมูลหนังสือเล่มใหม่จะถูกนำไปเพิ่มในฐานข้อมูลของระบบ E-Book Store และพร้อมจำหน่ายทันที
+                        <div
+                            class="mt-4 p-3 bg-blue-50/60 rounded-xl border border-blue-100 text-[11px] text-blue-700 leading-relaxed">
+                            💡 <strong>คำแนะนำ:</strong> เมื่อกดบันทึก
+                            ข้อมูลหนังสือเล่มใหม่จะถูกนำไปเพิ่มในฐานข้อมูลของระบบ E-Book Store และพร้อมจำหน่ายทันที
                         </div>
                     </div>
                 </div>
@@ -318,37 +379,383 @@
             previewDesc.innerText = e.target.value.trim() || 'คำโปรยและรายละเอียดย่อจะแสดงตัวอย่างในส่วนนี้...';
         });
 
-        // แสดงรูปภาพตัวอย่างเมื่อแอดมินเลือกไฟล์
+        // ตัวแปรกักเก็บรูปภาพ (DataURL หรือ URL)
+        let uploadedCoverDataUrl = '';
+
+        // ฟังก์ชันบีบอัดภาพอัตโนมัติด้วย HTML5 Canvas เพื่อป้องกัน QuotaExceededError ใน localStorage
+        function compressImage(file, maxWidth, maxHeight, quality, callback) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = Math.round((height * maxWidth) / width);
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = Math.round((width * maxHeight) / height);
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                    callback(compressedDataUrl);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // แสดงรูปภาพตัวอย่างและบีบอัดเมื่อแอดมินเลือกไฟล์
         function handleImagePreview(event) {
             const file = event.target.files[0];
+            const statusEl = document.getElementById('uploadStatus');
+            const urlInput = document.getElementById('coverUrlInput');
+            if (urlInput) urlInput.value = '';
+
             if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('previewCover').src = e.target.result;
-                };
-                reader.readAsDataURL(file);
+                if (statusEl) statusEl.innerHTML = '<span class="text-blue-600 animate-pulse">⏳ กำลังประมวลผลและปรับขนาดภาพ...</span>';
+
+                // บีบอัดให้ขนาดไม่เกิน 400x550px คุณภาพ 0.75 (ไฟล์จะเหลือเพียง ~20-35 KB)
+                compressImage(file, 400, 550, 0.75, function (compressedUrl) {
+                    uploadedCoverDataUrl = compressedUrl;
+                    document.getElementById('previewCover').src = uploadedCoverDataUrl;
+                    if (statusEl) {
+                        const kb = Math.round((compressedUrl.length * 3 / 4) / 1024);
+                        statusEl.innerHTML = `<span class="text-green-600 font-medium">✅ รูปภาพพร้อมใช้งาน (บีบอัดอัตโนมัติเหลือ ~${kb} KB)</span>`;
+                    }
+                });
             }
         }
 
+        // ใช้รูปภาพจาก URL ที่ผู้ใช้วาง
+        function handleCoverUrlInput(url) {
+            const trimmed = (url || '').trim();
+            const statusEl = document.getElementById('uploadStatus');
+            const fileInput = document.getElementById('coverImageInput');
+            if (fileInput) fileInput.value = '';
+
+            if (trimmed) {
+                uploadedCoverDataUrl = trimmed;
+                document.getElementById('previewCover').src = trimmed;
+                if (statusEl) {
+                    statusEl.innerHTML = '<span class="text-blue-600 font-medium">🔗 ใช้งานรูปภาพจากลิงก์ URL สำเร็จ</span>';
+                }
+            } else {
+                uploadedCoverDataUrl = '';
+                const cat = categoryNameInput.value;
+                document.getElementById('previewCover').src = fallbackCovers[cat] || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400";
+            }
+        }
+
+        // ใช้รูปภาพมาตรฐานตามหมวดหมู่
+        function useCategoryCover(catName) {
+            categoryNameInput.value = catName;
+            categoryNameInput.dispatchEvent(new Event('change'));
+            uploadedCoverDataUrl = fallbackCovers[catName] || '';
+            document.getElementById('previewCover').src = uploadedCoverDataUrl;
+            const fileInput = document.getElementById('coverImageInput');
+            if (fileInput) fileInput.value = '';
+            const urlInput = document.getElementById('coverUrlInput');
+            if (urlInput) urlInput.value = '';
+            const statusEl = document.getElementById('uploadStatus');
+            if (statusEl) {
+                statusEl.innerHTML = `<span class="text-indigo-600 font-medium">🎨 เลือกภาพมาตรฐานหมวดหมู่: ${catName}</span>`;
+            }
+        }
+
+        // ฐานข้อมูลหนังสือตั้งต้น 8 เล่มตามหน้าเว็บไซต์
+        const defaultBooks = [
+            {
+                id: 1,
+                title: "Lean Startup & Product Strategy",
+                author: "ณัฐพร นวัตกรรม",
+                price: 320,
+                category: "ธุรกิจ & การตลาด",
+                description: "คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ",
+                cover: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 2,
+                title: "กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)",
+                author: "กวี ศรีสยาม",
+                price: 195,
+                category: "วรรณกรรม & นวนิยาย",
+                description: "นวนิยายไซไฟแฟนตาซี การเดินทางข้ามห้วงกาลเวลาเพื่อกอบกู้ดวงดาวที่สาบสูญ",
+                cover: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 3,
+                title: "Practical Generative AI for Developers",
+                author: "ดร. ธีรภัทร ปัญญาประดิษฐ์",
+                price: 490,
+                category: "วิทยาศาสตร์ข้อมูล & AI",
+                description: "คู่มือนักพัฒนาในการเชื่อมต่อ LLM APIs, Prompt Engineering, RAG Architecture และการสร้าง AI Agents",
+                cover: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 4,
+                title: "The Modern Growth Hacking & Digital Marketing",
+                author: "อนันต์ การตลาดดิจิทัล",
+                price: 390,
+                category: "ธุรกิจ & การตลาด",
+                description: "กลยุทธ์ยิงแอดและสร้าง Funnel ปิดการขายอัตโนมัติ สำหรับธุรกิจออนไลน์ที่ต้องการสเกลยอดขาย",
+                cover: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 5,
+                title: "จิตวิทยาการบริหารเวลา Focus & Productivity",
+                author: "พญ. ธิดารัตน์ สุขภาพจิต",
+                price: 250,
+                category: "พัฒนาตนเอง & จิตวิทยา",
+                description: "เคล็ดลับทางประสาทวิทยาในการกำจัดนิสัยผลัดวันประกันพรุ่งและโฟกัสกับงานสำคัญอย่างเด็ดขาด",
+                cover: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 6,
+                title: "คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน",
+                author: "ชัชวาล เศรษฐศาสตร์",
+                price: 290,
+                category: "การเงิน & การลงทุน",
+                description: "เข้าใจการลดหย่อนภาษีอย่างถูกต้อง พร้อมกลยุทธ์สร้างอิสรภาพทางการเงินผ่านกองทุนรวมและหุ้นปันผล",
+                cover: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 7,
+                title: "Full-Stack Web Development with Python & Modern Stack",
+                author: "อาจารย์ พรชัย เทคโนโลยี",
+                price: 420,
+                category: "เทคโนโลยี & การเขียนโปรแกรม",
+                description: "สร้างเว็บแอปพลิเคชันระดับโปรดักชันด้วย Flask, RESTful API และฐานข้อมูล พร้อมการทำ Deployment",
+                cover: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600"
+            },
+            {
+                id: 8,
+                title: "Mastering Database Design & SQL",
+                author: "ดร. กิตติพงษ์ วิริยะกุล",
+                price: 299,
+                category: "เทคโนโลยี & การเขียนโปรแกรม",
+                description: "เจาะลึกการออกแบบฐานข้อมูลเชิงสัมพันธ์ตั้งแต่ระดับพื้นฐาน Normalization 3NF จนถึงการ Optimize Query",
+                cover: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=600"
+            }
+        ];
+
+        // รูปภาพปกสำรองตามหมวดหมู่ถ้าไม่ได้อัปโหลดภาพ
+        const fallbackCovers = {
+            "ธุรกิจ & การตลาด": "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600",
+            "วรรณกรรม & นวนิยาย": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600",
+            "วิทยาศาสตร์ข้อมูล & AI": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600",
+            "พัฒนาตนเอง & จิตวิทยา": "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600",
+            "การเงิน & การลงทุน": "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=600",
+            "เทคโนโลยี & การเขียนโปรแกรม": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600"
+        };
+
         // ฟังก์ชันเมื่อกดปุ่ม "บันทึกและเพิ่มหนังสือ"
         function saveBook(event) {
-            event.preventDefault();
+            if (event && event.preventDefault) {
+                event.preventDefault();
+            }
 
             const title = bookTitleInput.value.trim();
             const author = authorNameInput.value.trim();
             const category = categoryNameInput.value;
-            const price = bookPriceInput.value;
+            const price = parseFloat(bookPriceInput.value);
+            const description = bookDescInput.value.trim();
 
-            if (!title || !author || !category || !price) {
+            if (!title || !author || !category || isNaN(price)) {
                 alert('⚠️ กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
-                return;
+                return false;
             }
 
-            // แสดงการแจ้งเตือนตามข้อกำหนด
-            alert(`🎉 เพิ่ม E-Book เล่มใหม่เข้าสู่ระบบเรียบร้อยแล้ว!\n\nชื่อหนังสือ: "${title}"\nผู้แต่ง: ${author}\nหมวดหมู่: ${category}\nราคา: ฿${parseFloat(price).toFixed(2)}\n\nระบบจะพาท่านกลับสู่หน้าจัดการหลังบ้าน (Admin Dashboard)`);
+            // 1. ดึงข้อมูลหนังสือปัจจุบันจาก localStorage
+            let storedBooks = localStorage.getItem('ebooks_store');
+            let books = [];
+            if (storedBooks) {
+                try {
+                    books = JSON.parse(storedBooks);
+                } catch (e) {
+                    console.error("Parse error, resetting to default", e);
+                    books = [...defaultBooks];
+                }
+            } else {
+                books = [...defaultBooks];
+            }
 
-            // จำลองการเปลี่ยนเส้นทางกลับไปยังหน้า admin.html
-            window.location.href = 'admin.html';
+            // กำหนดรูปภาพปก (ภาพบีบอัด หรือ URL หรือภาพมาตรฐานหมวดหมู่)
+            const chosenCover = uploadedCoverDataUrl || fallbackCovers[category] || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400";
+
+            // ==========================================
+            // กรณีที่ 1: บันทึกการแก้ไข (Edit Existing Book)
+            // ==========================================
+            if (isEditMode && editingBook) {
+                const bookIndex = books.findIndex(b => String(b.id) === String(editId));
+                if (bookIndex !== -1) {
+                    books[bookIndex] = {
+                        ...books[bookIndex],
+                        title: title,
+                        author: author,
+                        category: category,
+                        price: price,
+                        description: description || "ไม่มีคำอธิบายเพิ่มเติม",
+                        cover: chosenCover,
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    try {
+                        localStorage.setItem('ebooks_store', JSON.stringify(books));
+                    } catch (err) {
+                        if (err.name === 'QuotaExceededError' || err.code === 22) {
+                            books[bookIndex].cover = fallbackCovers[category] || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400";
+                            localStorage.setItem('ebooks_store', JSON.stringify(books));
+                            alert('⚠️ พื้นที่เบราว์เซอร์จำกัด จึงปรับใช้รูปมาตรฐานให้เรียบร้อยแล้ว');
+                        } else {
+                            alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+                            return false;
+                        }
+                    }
+
+                    alert(`✅ บันทึกการแก้ไขข้อมูลหนังสือ "${title}" เรียบร้อยแล้ว!\n\nระบบจะนำท่านไปยังหน้าร้านค้า เพื่อดูข้อมูลที่อัปเดตบนหน้าเว็บทันที`);
+
+                    const returnTo = urlParams.get('return');
+                    if (returnTo === 'admin') {
+                        window.location.href = 'admin.html';
+                    } else if (returnTo === 'detail') {
+                        window.location.href = `book-detail.html?id=${editId}`;
+                    } else {
+                        window.location.href = `index.html?newBook=${editId}#bookSection`;
+                    }
+                    return true;
+                }
+            }
+
+            // ==========================================
+            // กรณีที่ 2: เพิ่มหนังสือเล่มใหม่ (Add New Book)
+            // ==========================================
+            // คำนวณ ID ถัดไป
+            const newId = books.length > 0 ? Math.max(...books.map(b => Number(b.id) || 0)) + 1 : 1;
+
+            // สร้าง Object หนังสือเล่มใหม่
+            const newBook = {
+                id: newId,
+                title: title,
+                author: author,
+                category: category,
+                price: price,
+                description: description || "ไม่มีคำอธิบายเพิ่มเติม",
+                cover: chosenCover,
+                isNew: true,
+                createdAt: new Date().toISOString()
+            };
+
+            // บันทึกลงใน localStorage พร้อมระบบป้องกัน Quota เต็ม
+            books.push(newBook);
+            try {
+                localStorage.setItem('ebooks_store', JSON.stringify(books));
+            } catch (err) {
+                console.warn("Storage quota warning, falling back to light cover", err);
+                if (err.name === 'QuotaExceededError' || err.code === 22) {
+                    newBook.cover = fallbackCovers[category] || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400";
+                    books[books.length - 1] = newBook;
+                    try {
+                        localStorage.setItem('ebooks_store', JSON.stringify(books));
+                        alert('⚠️ พื้นที่เบราว์เซอร์จำกัด ระบบได้บันทึกหนังสือพร้อมปรับใช้รูปปกมาตรฐานให้เรียบร้อยแล้ว');
+                    } catch (e2) {
+                        alert('❌ ไม่สามารถบันทึกลงในเบราว์เซอร์ได้: ' + e2.message);
+                        return false;
+                    }
+                } else {
+                    alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
+                    return false;
+                }
+            }
+
+            // แจ้งเตือนแอดมินและนำทางไปหน้าร้าน index.html
+            alert(`🎉 เพิ่ม E-Book เล่มใหม่เข้าสู่ระบบเรียบร้อยแล้ว!\n\n📖 ชื่อเรื่อง: "${title}"\n✍️ ผู้แต่ง: ${author}\n🏷️ หมวดหมู่: ${category}\n💰 ราคา: ฿${price.toFixed(2)}\n\nระบบจะพาท่านไปยังหน้าร้านค้า (index.html) เพื่อดูหนังสือเล่มใหม่บนหน้าเว็บทันที!`);
+
+            // เปลี่ยนเส้นทางกลับไปที่หน้าร้านค้า index.html พร้อมพารามิเตอร์ newBook
+            window.location.href = `index.html?newBook=${newId}#bookSection`;
+            return true;
+        }
+
+        // ==========================================
+        // ตรวจสอบโหมดแก้ไขเมื่อเปิดหน้าเว็บ (Init Edit Mode)
+        // ==========================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit') || urlParams.get('id');
+        let isEditMode = false;
+        let editingBook = null;
+
+        function checkEditMode() {
+            if (!editId) return;
+
+            const storedBooks = localStorage.getItem('ebooks_store');
+            let books = [];
+            if (storedBooks) {
+                try {
+                    books = JSON.parse(storedBooks);
+                } catch (e) {
+                    books = [...defaultBooks];
+                }
+            } else {
+                books = [...defaultBooks];
+            }
+
+            editingBook = books.find(b => String(b.id) === String(editId));
+            if (editingBook) {
+                isEditMode = true;
+                document.title = `แก้ไขข้อมูล E-Book: ${editingBook.title} - ระบบหลังบ้าน`;
+
+                const breadcrumbEl = document.getElementById('formBreadcrumb');
+                if (breadcrumbEl) breadcrumbEl.innerText = `แก้ไข E-Book (#${editingBook.id})`;
+
+                const titleEl = document.getElementById('formPageTitle');
+                if (titleEl) titleEl.innerHTML = `<span>✏️</span> แก้ไขข้อมูล E-Book: <span class="text-blue-600 font-bold">${editingBook.title}</span>`;
+
+                const subEl = document.getElementById('formPageSubtitle');
+                if (subEl) subEl.innerText = `ปรับปรุงชื่อหนังสือ ผู้แต่ง หมวดหมู่ ราคา คำโปรย หรือเปลี่ยนรูปภาพหน้าปกสำหรับเล่มนี้`;
+
+                const btnTextEl = document.getElementById('submitBtnText');
+                if (btnTextEl) btnTextEl.innerText = '💾 บันทึกการแก้ไขข้อมูลหนังสือ';
+
+                // ใส่ค่าเดิมลงในช่องกรอก
+                bookTitleInput.value = editingBook.title || '';
+                authorNameInput.value = editingBook.author || '';
+                categoryNameInput.value = editingBook.category || '';
+                bookPriceInput.value = editingBook.price || 0;
+                bookDescInput.value = editingBook.description || '';
+                uploadedCoverDataUrl = editingBook.cover || '';
+
+                // อัปเดตตัวอย่าง Live Preview ด้านขวา
+                previewTitle.innerText = editingBook.title;
+                previewAuthor.innerText = editingBook.author ? `โดย ${editingBook.author}` : 'โดย ผู้แต่ง';
+                previewCategory.innerText = editingBook.category || 'หมวดหมู่';
+                previewPrice.innerText = `฿${parseFloat(editingBook.price || 0).toFixed(2)}`;
+                previewDesc.innerText = editingBook.description || '';
+                document.getElementById('previewCover').src = editingBook.cover || fallbackCovers[editingBook.category] || '';
+
+                const statusEl = document.getElementById('uploadStatus');
+                if (statusEl) {
+                    statusEl.innerHTML = `<span class="text-amber-800 font-semibold bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200 inline-block">✏️ กำลังอยู่ในโหมดแก้ไขหนังสือ #${editingBook.id} (เลือกไฟล์หรือวาง URL ใหม่เพื่อเปลี่ยนภาพปก)</span>`;
+                }
+            }
+        }
+
+        // เรียกตรวจสอบโหมดแก้ไขทันที
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', checkEditMode);
+        } else {
+            checkEditMode();
         }
     </script>
 </body>

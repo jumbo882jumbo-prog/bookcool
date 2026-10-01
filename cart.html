@@ -14,6 +14,8 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
+    <script src="auth.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -36,10 +38,8 @@
                 <a href="my-books.html" class="text-sm text-gray-300 hover:text-white flex items-center gap-1 transition">
                     📚 หนังสือของฉัน
                 </a>
-                <!-- ปุ่มลัดไปหลังบ้าน Admin -->
-                <a href="admin.html" class="text-xs bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white px-2.5 py-1.5 rounded-lg border border-gray-700 transition hidden sm:inline-block">
-                    ⚙️ หลังบ้าน
-                </a>
+                <!-- ส่วนแสดงสถานะล็อกอินและบัญชีผู้ใช้งาน (Auth Nav Container) -->
+                <div class="auth-nav-container flex items-center"></div>
             </div>
         </div>
     </header>
@@ -57,41 +57,24 @@
 
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden mb-6">
             <div class="p-6 divide-y divide-gray-100" id="cartItemList">
-                <!-- รายการหนังสือในตะกร้า 1 -->
-                <div class="flex flex-col sm:flex-row items-center justify-between py-4 gap-4" id="item-1">
-                    <div class="flex items-center gap-4 w-full sm:w-auto">
-                        <img src="https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100"
-                            alt="ถอดรหัสวิญญาณแห่งดวงดาว" class="w-16 h-20 object-cover rounded-lg shadow-sm">
-                        <div>
-                            <h3 class="font-bold text-base">ถอดรหัสวิญญาณแห่งดวงดาว</h3>
-                            <p class="text-xs text-gray-500">ผู้แต่ง: กวิน ทัศนีย์</p>
-                            <span class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded mt-1 inline-block">E-Book (PDF/EPUB)</span>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between w-full sm:w-auto gap-6">
-                        <span class="font-bold text-lg text-blue-600">฿300.00</span>
-                        <button onclick="removeItem('item-1')" class="text-red-500 hover:text-red-700 text-xs font-semibold px-2 py-1 rounded hover:bg-red-50 transition cursor-pointer">
-                            ลบออก
-                        </button>
-                    </div>
-                </div>
+                <!-- ข้อมูลหนังสือในตะกร้าจะโหลดที่นี่ด้วย JavaScript -->
             </div>
 
             <!-- สรุปยอดเงินและปุ่มดำเนินการชำระเงิน -->
-            <div class="bg-gray-50 p-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div id="cartSummaryContainer" class="bg-gray-50 p-6 border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                    <p class="text-sm text-gray-500">ยอดรวมทั้งสิ้น (1 เล่ม)</p>
-                    <h2 class="text-2xl font-bold text-blue-600">฿300.00</h2>
+                    <p class="text-sm text-gray-500" id="cartSummaryCount">ยอดรวมทั้งสิ้น (0 เล่ม)</p>
+                    <h2 class="text-2xl font-bold text-blue-600" id="cartSummaryTotal">฿0.00</h2>
                 </div>
 
                 <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                     <!-- ปุ่มกลับไปเลือกซื้อหนังสือ -->
-                    <a href="index.html"
+                    <a href="index.html#bookSection"
                         class="text-center bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium px-6 py-3 rounded-xl transition">
                         ← เลือกซื้อหนังสือต่อ
                     </a>
                     <!-- ปุ่มดำเนินการชำระเงิน (เชื่อมโยงไป checkout.html) -->
-                    <a href="checkout.html"
+                    <a id="btnCheckout" href="checkout.html"
                         class="text-center bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-xl shadow hover:shadow-md transition">
                         💳 ดำเนินการชำระเงิน →
                     </a>
@@ -107,21 +90,100 @@
             <a href="cart.html" class="hover:text-blue-600 font-semibold text-blue-600">ตะกร้าสินค้า</a>
             <a href="checkout.html" class="hover:text-blue-600">ชำระเงิน</a>
             <a href="my-books.html" class="hover:text-blue-600">หนังสือของฉัน</a>
-            <a href="admin.html" class="hover:text-red-600">ระบบหลังบ้าน (Admin)</a>
+            <a href="admin.html" class="admin-link-nav hover:text-red-600">ระบบหลังบ้าน (Admin)</a>
         </div>
         <p>© 2026 E-Book Store Mini Project. All rights reserved.</p>
     </footer>
 
     <script>
-        function removeItem(elementId) {
-            if (confirm('คุณต้องการนำหนังสือเล่มนี้ออกจากตะกร้าใช่หรือไม่?')) {
-                const el = document.getElementById(elementId);
-                if (el) {
-                    el.remove();
-                    alert('นำหนังสือออกจากตะกร้าแล้ว');
-                }
+        function renderCart() {
+            const listEl = document.getElementById('cartItemList');
+            const summaryCount = document.getElementById('cartSummaryCount');
+            const summaryTotal = document.getElementById('cartSummaryTotal');
+            const btnCheckout = document.getElementById('btnCheckout');
+            
+            const cart = cartManager.getCart();
+
+            if (!cart || cart.length === 0) {
+                listEl.innerHTML = `
+                    <div class="text-center py-12">
+                        <div class="text-5xl mb-3">🛒</div>
+                        <h3 class="text-lg font-bold text-gray-700">ตะกร้าสินค้าของคุณยังว่างเปล่า</h3>
+                        <p class="text-xs text-gray-400 mt-1 mb-6">คุณยังไม่ได้เพิ่มหนังสือเล่มใดลงในตะกร้า</p>
+                        <a href="index.html#bookSection" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-6 py-3 rounded-xl shadow transition">
+                            📖 เลือกซื้อหนังสือหน้าร้าน
+                        </a>
+                    </div>
+                `;
+                summaryCount.innerText = "ยอดรวมทั้งสิ้น (0 เล่ม)";
+                summaryTotal.innerText = "฿0.00";
+                btnCheckout.classList.add('opacity-50', 'pointer-events-none');
+                return;
+            }
+
+            btnCheckout.classList.remove('opacity-50', 'pointer-events-none');
+            
+            let totalCount = 0;
+            let totalPrice = 0;
+
+            listEl.innerHTML = cart.map(item => {
+                const qty = item.quantity || 1;
+                const itemTotal = (parseFloat(item.price) || 0) * qty;
+                totalCount += qty;
+                totalPrice += itemTotal;
+
+                return `
+                <div class="flex flex-col sm:flex-row items-center justify-between py-4 gap-4" id="item-${item.id}">
+                    <div class="flex items-center gap-4 w-full sm:w-auto">
+                        <img src="${item.cover}"
+                            alt="${item.title}" 
+                            class="w-16 h-20 object-cover rounded-lg shadow-sm"
+                            onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100'">
+                        <div>
+                            <h3 class="font-bold text-base text-gray-900">${item.title}</h3>
+                            <p class="text-xs text-gray-500">ผู้แต่ง: ${item.author || 'ไม่ระบุ'}</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="text-xs text-blue-600 font-medium bg-blue-50 px-2 py-0.5 rounded inline-block">
+                                    ${item.category || 'E-Book'}
+                                </span>
+                                <span class="text-xs text-gray-500 font-medium">
+                                    จำนวน: ${qty} เล่ม
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between w-full sm:w-auto gap-6">
+                        <span class="font-bold text-lg text-blue-600">฿${itemTotal.toFixed(2)}</span>
+                        <button onclick="handleRemoveItem('${item.id}', '${item.title}')" 
+                            class="text-red-500 hover:text-red-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg hover:bg-red-50 transition cursor-pointer">
+                            🗑️ ลบออก
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+
+            summaryCount.innerText = `ยอดรวมทั้งสิ้น (${totalCount} เล่ม)`;
+            summaryTotal.innerText = `฿${totalPrice.toFixed(2)}`;
+        }
+
+        function handleRemoveItem(bookId, bookTitle) {
+            if (confirm(`คุณต้องการนำหนังสือ "${bookTitle}" ออกจากตะกร้าใช่หรือไม่?`)) {
+                cartManager.removeFromCart(bookId);
+                renderCart();
             }
         }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderCart);
+        } else {
+            renderCart();
+        }
+
+        window.addEventListener('pageshow', renderCart);
+        window.addEventListener('storage', (e) => {
+            if (e.key === 'cart_items') renderCart();
+        });
+        window.addEventListener('cartUpdated', renderCart);
     </script>
 </body>
 
