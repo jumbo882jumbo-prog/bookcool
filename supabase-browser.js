@@ -246,6 +246,60 @@
 
             if (error) throw error;
             return data;
+        },
+
+        // 10. ดึงรายการสินค้าในตะกร้าจาก Supabase (cart_items)
+        async getCartItems(username = 'user') {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('cart_items')
+                .select('*')
+                .eq('username', username)
+                .order('cart_item_id', { ascending: false });
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 11. เพิ่มสินค้าลงตะกร้าใน Supabase
+        async addToCartDb({ username = 'user', ebookId, bookTitle, price, quantity = 1 }) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('cart_items')
+                .insert([{
+                    username,
+                    ebook_id: ebookId,
+                    book_title: bookTitle,
+                    price,
+                    quantity
+                }])
+                .select();
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 12. ล้างตะกร้าใน Supabase
+        async clearCartDb(username = 'user') {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('cart_items')
+                .delete()
+                .eq('username', username);
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 13. ดึงรายชื่อผู้ใช้จากตาราง users
+        async getUsers() {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('users')
+                .select('user_id, username, name, email, role, avatar');
+
+            if (error) throw error;
+            return data;
         }
     };
 
