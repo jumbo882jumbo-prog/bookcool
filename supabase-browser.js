@@ -127,6 +127,88 @@
             return data;
         },
 
+        // 3.1 เพิ่มหนังสือเล่มใหม่ลงใน Supabase (ตาราง ebooks)
+        async addBook({ title, author, price, categoryName, description = '', coverImage = '', downloadUrl = '#' }) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            
+            // หา category_id ที่ตรงกับชื่อหมวดหมู่
+            let categoryId = null;
+            try {
+                const cats = await this.getCategories();
+                if (Array.isArray(cats)) {
+                    const found = cats.find(c => c.category_name.trim() === (categoryName || '').trim() || (categoryName || '').includes(c.category_name));
+                    if (found) categoryId = found.category_id;
+                }
+            } catch (catErr) {
+                console.warn('Cannot map category_id:', catErr);
+            }
+
+            const { data, error } = await this.client
+                .from('ebooks')
+                .insert([{
+                    title: title.trim(),
+                    author_name: author.trim(),
+                    price: parseFloat(price) || 0,
+                    category_id: categoryId,
+                    category_name: categoryName || 'ทั่วไป',
+                    description: description || '',
+                    cover_image: coverImage || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+                    download_url: downloadUrl || '#',
+                    is_published: true
+                }])
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 3.2 แก้ไขข้อมูลหนังสือใน Supabase
+        async updateBook(ebookId, { title, author, price, categoryName, description = '', coverImage = '' }) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            
+            let categoryId = null;
+            try {
+                const cats = await this.getCategories();
+                if (Array.isArray(cats)) {
+                    const found = cats.find(c => c.category_name.trim() === (categoryName || '').trim() || (categoryName || '').includes(c.category_name));
+                    if (found) categoryId = found.category_id;
+                }
+            } catch (e) {}
+
+            const updatePayload = {
+                title: title.trim(),
+                author_name: author.trim(),
+                price: parseFloat(price) || 0,
+                category_name: categoryName || 'ทั่วไป',
+                description: description || '',
+                updated_at: new Date().toISOString()
+            };
+            if (categoryId) updatePayload.category_id = categoryId;
+            if (coverImage) updatePayload.cover_image = coverImage;
+
+            const { data, error } = await this.client
+                .from('ebooks')
+                .update(updatePayload)
+                .eq('ebook_id', ebookId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 3.3 ลบหนังสือออกจาก Supabase
+        async deleteBook(ebookId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { error } = await this.client
+                .from('ebooks')
+                .delete()
+                .eq('ebook_id', ebookId);
+            if (error) throw error;
+            return true;
+        },
+
         // 4. สร้างคำสั่งซื้อใหม่ (บันทึกลง orders และ order_items)
         async createOrder({ orderId, userId, customerName, customerEmail, totalAmount, slipUrl = '', items = [] }) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');

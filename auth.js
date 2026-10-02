@@ -412,8 +412,16 @@ const orderManager = {
 
     createOrder(customerInfo, items, total, slipDataUrl = null) {
         const orders = this.getOrders();
-        // สร้างรหัสคำสั่งซื้อใหม่ เช่น ORD-2026-003
-        const nextNum = orders.length + 1;
+        // คำนวณรหัสคำสั่งซื้อใหม่ ป้องกันการชนกับบิลเดิมในระบบหรือ Supabase
+        let maxNum = 16; // ตั้งต้นขั้นต่ำ 16 เพื่อไม่ให้ชนกับบิล ORD-2026-001 ถึง 016
+        orders.forEach(o => {
+            const m = String(o.id).match(/ORD-\d+-(\d+)/);
+            if (m) {
+                const n = parseInt(m[1], 10);
+                if (n > maxNum) maxNum = n;
+            }
+        });
+        const nextNum = maxNum + 1;
         const orderId = `ORD-2026-${String(nextNum).padStart(3, '0')}`;
 
         const now = new Date();
@@ -421,7 +429,8 @@ const orderManager = {
             String(now.getMonth() + 1).padStart(2, '0') + '-' + 
             String(now.getDate()).padStart(2, '0') + ' ' + 
             String(now.getHours()).padStart(2, '0') + ':' + 
-            String(now.getMinutes()).padStart(2, '0');
+            String(now.getMinutes()).padStart(2, '0') + ':' +
+            String(now.getSeconds()).padStart(2, '0');
 
         const newOrder = {
             id: orderId,
@@ -448,8 +457,16 @@ const orderManager = {
             target.status = 'approved';
             this.saveOrders(orders);
             return { success: true, order: target };
+        } else {
+            // หากดึงข้อมูลสดมาจาก Supabase แต่ยังไม่มีใน local ให้บันทึกสถานะ approved ลง local
+            orders.unshift({
+                id: orderId,
+                status: 'approved',
+                date: new Date().toLocaleString('th-TH')
+            });
+            this.saveOrders(orders);
+            return { success: true };
         }
-        return { success: false, message: 'ไม่พบคำสั่งซื้อ' };
     },
 
     deleteOrder(orderId) {

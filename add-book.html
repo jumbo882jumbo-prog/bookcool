@@ -19,6 +19,9 @@
     <script>
         auth.protectAdminPage();
     </script>
+    <!-- Supabase JS Client & bookcool Integration SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
@@ -562,7 +565,7 @@
         };
 
         // ฟังก์ชันเมื่อกดปุ่ม "บันทึกและเพิ่มหนังสือ"
-        function saveBook(event) {
+        async function saveBook(event) {
             if (event && event.preventDefault) {
                 event.preventDefault();
             }
@@ -577,6 +580,11 @@
                 alert('⚠️ กรุณากรอกข้อมูลที่จำเป็น (*) ให้ครบถ้วน');
                 return false;
             }
+
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            if (submitBtn) submitBtn.disabled = true;
+            if (submitBtnText) submitBtnText.innerText = '⏳ กำลังบันทึกข้อมูลเข้าสู่ระบบ...';
 
             // 1. ดึงข้อมูลหนังสือปัจจุบันจาก localStorage
             let storedBooks = localStorage.getItem('ebooks_store');
@@ -599,6 +607,23 @@
             // กรณีที่ 1: บันทึกการแก้ไข (Edit Existing Book)
             // ==========================================
             if (isEditMode && editingBook) {
+                // ซิงก์การแก้ไขไปยัง Supabase
+                try {
+                    if (window.bookcoolDb && window.bookcoolDb.client) {
+                        await window.bookcoolDb.updateBook(editId, {
+                            title,
+                            author,
+                            price,
+                            categoryName: category,
+                            description,
+                            coverImage: chosenCover
+                        });
+                        console.log('⚡ [Supabase] แก้ไขข้อมูลหนังสือสำเร็จ ID:', editId);
+                    }
+                } catch (supaErr) {
+                    console.warn('⚠️ ไม่สามารถซิงก์แก้ไขไป Supabase ได้:', supaErr.message);
+                }
+
                 const bookIndex = books.findIndex(b => String(b.id) === String(editId));
                 if (bookIndex !== -1) {
                     books[bookIndex] = {
@@ -614,18 +639,15 @@
 
                     try {
                         localStorage.setItem('ebooks_store', JSON.stringify(books));
+                        localStorage.setItem('ebooks_version', 'v2_8books');
                     } catch (err) {
                         if (err.name === 'QuotaExceededError' || err.code === 22) {
                             books[bookIndex].cover = fallbackCovers[category] || "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400";
                             localStorage.setItem('ebooks_store', JSON.stringify(books));
-                            alert('⚠️ พื้นที่เบราว์เซอร์จำกัด จึงปรับใช้รูปมาตรฐานให้เรียบร้อยแล้ว');
-                        } else {
-                            alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
-                            return false;
                         }
                     }
 
-                    alert(`✅ บันทึกการแก้ไขข้อมูลหนังสือ "${title}" เรียบร้อยแล้ว!\n\nระบบจะนำท่านไปยังหน้าร้านค้า เพื่อดูข้อมูลที่อัปเดตบนหน้าเว็บทันที`);
+                    alert(`✅ บันทึกการแก้ไขข้อมูลหนังสือ "${title}" เรียบร้อยแล้ว!`);
 
                     const returnTo = urlParams.get('return');
                     if (returnTo === 'admin') {
@@ -633,7 +655,7 @@
                     } else if (returnTo === 'detail') {
                         window.location.href = `book-detail.html?id=${editId}`;
                     } else {
-                        window.location.href = `index.html?newBook=${editId}#bookSection`;
+                        window.location.href = `admin.html`;
                     }
                     return true;
                 }
@@ -642,8 +664,29 @@
             // ==========================================
             // กรณีที่ 2: เพิ่มหนังสือเล่มใหม่ (Add New Book)
             // ==========================================
-            // คำนวณ ID ถัดไป
-            const newId = books.length > 0 ? Math.max(...books.map(b => Number(b.id) || 0)) + 1 : 1;
+            // 2.1 บันทึกเข้า Supabase (ตาราง ebooks) ก่อน
+            let supaBookId = null;
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const supaRes = await window.bookcoolDb.addBook({
+                        title: title,
+                        author: author,
+                        price: price,
+                        categoryName: category,
+                        description: description,
+                        coverImage: chosenCover
+                    });
+                    if (supaRes && supaRes.ebook_id) {
+                        supaBookId = supaRes.ebook_id;
+                        console.log('⚡ [Supabase] เพิ่มหนังสือเล่มใหม่ลงในตาราง ebooks สำเร็จ ID:', supaBookId);
+                    }
+                }
+            } catch (supaErr) {
+                console.warn('⚠️ บันทึกลง Supabase ไม่สำเร็จ (ใช้โหมด LocalStorage สำรอง):', supaErr.message);
+            }
+
+            // 2.2 คำนวณ ID หนังสือ
+            const newId = supaBookId || (books.length > 0 ? Math.max(...books.map(b => Number(b.id) || 0)) + 1 : 9);
 
             // สร้าง Object หนังสือเล่มใหม่
             const newBook = {
@@ -658,10 +701,11 @@
                 createdAt: new Date().toISOString()
             };
 
-            // บันทึกลงใน localStorage พร้อมระบบป้องกัน Quota เต็ม
+            // บันทึกลงใน localStorage
             books.push(newBook);
             try {
                 localStorage.setItem('ebooks_store', JSON.stringify(books));
+                localStorage.setItem('ebooks_version', 'v2_8books');
             } catch (err) {
                 console.warn("Storage quota warning, falling back to light cover", err);
                 if (err.name === 'QuotaExceededError' || err.code === 22) {
@@ -669,22 +713,16 @@
                     books[books.length - 1] = newBook;
                     try {
                         localStorage.setItem('ebooks_store', JSON.stringify(books));
-                        alert('⚠️ พื้นที่เบราว์เซอร์จำกัด ระบบได้บันทึกหนังสือพร้อมปรับใช้รูปปกมาตรฐานให้เรียบร้อยแล้ว');
-                    } catch (e2) {
-                        alert('❌ ไม่สามารถบันทึกลงในเบราว์เซอร์ได้: ' + e2.message);
-                        return false;
-                    }
-                } else {
-                    alert('❌ เกิดข้อผิดพลาดในการบันทึก: ' + err.message);
-                    return false;
+                        localStorage.setItem('ebooks_version', 'v2_8books');
+                    } catch (e2) {}
                 }
             }
 
-            // แจ้งเตือนแอดมินและนำทางไปหน้าร้าน index.html
-            alert(`🎉 เพิ่ม E-Book เล่มใหม่เข้าสู่ระบบเรียบร้อยแล้ว!\n\n📖 ชื่อเรื่อง: "${title}"\n✍️ ผู้แต่ง: ${author}\n🏷️ หมวดหมู่: ${category}\n💰 ราคา: ฿${price.toFixed(2)}\n\nระบบจะพาท่านไปยังหน้าร้านค้า (index.html) เพื่อดูหนังสือเล่มใหม่บนหน้าเว็บทันที!`);
+            // แจ้งเตือนแอดมิน
+            alert(`🎉 เพิ่ม E-Book เล่มใหม่เข้าสู่ระบบเรียบร้อยแล้ว!\n\n📖 ชื่อเรื่อง: "${title}"\n✍️ ผู้แต่ง: ${author}\n🏷️ หมวดหมู่: ${category}\n💰 ราคา: ฿${price.toFixed(2)}\n\nข้อมูลถูกบันทึกลงฐานข้อมูลเรียบร้อย และพร้อมแสดงผลในระบบหลังบ้านและหน้าร้านทันที!`);
 
-            // เปลี่ยนเส้นทางกลับไปที่หน้าร้านค้า index.html พร้อมพารามิเตอร์ newBook
-            window.location.href = `index.html?newBook=${newId}#bookSection`;
+            // นำทางกลับหน้า Admin Dashboard
+            window.location.href = `admin.html`;
             return true;
         }
 

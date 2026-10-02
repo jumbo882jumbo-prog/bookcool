@@ -211,8 +211,49 @@
             totalEl.innerText = `฿${checkoutTotal.toFixed(2)}`;
         }
 
+        function compressSlipImage(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxW = 500;
+                    const maxH = 700;
+                    if (width > height) {
+                        if (width > maxW) {
+                            height = Math.round((height * maxW) / width);
+                            width = maxW;
+                        }
+                    } else {
+                        if (height > maxH) {
+                            width = Math.round((width * maxH) / height);
+                            height = maxH;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    const compressed = canvas.toDataURL('image/jpeg', 0.7);
+                    callback(compressed);
+                };
+                img.onerror = function() {
+                    callback(e.target.result);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
         function submitPayment() {
             const btn = document.getElementById('btnSubmitPayment');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> กำลังส่งคำสั่งซื้อ...';
+            }
+
             const name = document.getElementById('custName').value.trim() || 'ลูกค้าทั่วไป';
             const email = document.getElementById('custEmail').value.trim() || 'customer@example.com';
             const currentUser = auth.getCurrentUser();
@@ -226,43 +267,48 @@
             const fileInput = document.getElementById('slipInput');
 
             async function finishOrder(slipDataUrl) {
-                // 1. สร้างคำสั่งซื้อใหม่และบันทึกลงในระบบ localStorage (orders_list)
-                const newOrder = orderManager.createOrder(customerInfo, checkoutCart, checkoutTotal, slipDataUrl);
-
-                // 1.1 บันทึกคำสั่งซื้อลง Supabase (ตาราง orders และ order_items) หากเชื่อมต่อไว้
                 try {
-                    if (window.bookcoolDb && window.bookcoolDb.client) {
-                        await window.bookcoolDb.createOrder({
-                            orderId: newOrder.id,
-                            userId: currentUser?.id || null,
-                            customerName: customerInfo.name,
-                            customerEmail: customerInfo.email,
-                            totalAmount: checkoutTotal,
-                            slipUrl: slipDataUrl || '',
-                            items: checkoutCart
-                        });
-                        console.log('⚡ [bookcool] บันทึกคำสั่งซื้อและรายการสินค้าลง Supabase สำเร็จ:', newOrder.id);
+                    // 1. สร้างคำสั่งซื้อใหม่และบันทึกลงในระบบ localStorage (orders_list)
+                    const newOrder = orderManager.createOrder(customerInfo, checkoutCart, checkoutTotal, slipDataUrl);
+
+                    // 1.1 บันทึกคำสั่งซื้อลง Supabase (ตาราง orders และ order_items) หากเชื่อมต่อไว้
+                    try {
+                        if (window.bookcoolDb && window.bookcoolDb.client) {
+                            await window.bookcoolDb.createOrder({
+                                orderId: newOrder.id,
+                                userId: currentUser?.id || null,
+                                customerName: customerInfo.name,
+                                customerEmail: customerInfo.email,
+                                totalAmount: checkoutTotal,
+                                slipUrl: slipDataUrl || '',
+                                items: checkoutCart
+                            });
+                            console.log('⚡ [bookcool] บันทึกคำสั่งซื้อลง Supabase (pending) สำเร็จ:', newOrder.id);
+                        }
+                    } catch (supaErr) {
+                        console.warn('⚠️ ไม่สามารถซิงก์ลง Supabase ได้ (ใช้ LocalStorage สำรอง):', supaErr.message);
                     }
-                } catch (supaErr) {
-                    console.warn('⚠️ ไม่สามารถซิงก์ลง Supabase ได้ (ใช้ LocalStorage สำรอง):', supaErr.message);
+
+                    // 2. เคลียร์ตะกร้าสินค้า
+                    cartManager.clearCart();
+
+                    // 3. แจ้งเตือนลูกค้า
+                    alert(`🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\nรหัสคำสั่งซื้อ: #${newOrder.id}\nยอดชำระ: ฿${newOrder.total.toFixed(2)}\nสถานะ: ⏳ "รอการตรวจสอบจากผู้ดูแลระบบ"\n\nคำสั่งซื้อถูกส่งไปยังระบบหลังบ้าน (Admin) เรียบร้อยแล้ว เพื่อรอแอดมินกดยืนยันคำสั่งซื้อครับ`);
+
+                    // 4. ไปยังหน้าหนังสือของฉัน
+                    window.location.href = `my-books.html?newOrder=${encodeURIComponent(newOrder.id)}`;
+                } catch (err) {
+                    console.error('Checkout error:', err);
+                    alert('❌ เกิดข้อผิดพลาดในการสั่งซื้อ: ' + err.message);
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '✅ ยืนยันการชำระเงินและส่งตรวจสอบ';
+                    }
                 }
-
-                // 2. เคลียร์ตะกร้าสินค้า
-                cartManager.clearCart();
-
-                // 3. แจ้งเตือนลูกค้า
-                alert(`🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\nรหัสคำสั่งซื้อ: #${newOrder.id}\nยอดชำระ: ฿${newOrder.total.toFixed(2)}\nสถานะ: ⏳ "รอการตรวจสอบจากผู้ดูแลระบบ"\n\nคำสั่งซื้อถูกส่งไปยังระบบหลังบ้าน (Admin) เรียบร้อยแล้ว เพื่อรอแอดมินกดยืนยันคำสั่งซื้อครับ`);
-
-                // 4. ไปยังหน้าหนังสือของฉัน
-                window.location.href = `my-books.html?newOrder=${encodeURIComponent(newOrder.id)}`;
             }
 
             if (fileInput && fileInput.files && fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    finishOrder(e.target.result);
-                };
-                reader.readAsDataURL(fileInput.files[0]);
+                compressSlipImage(fileInput.files[0], finishOrder);
             } else {
                 finishOrder(null);
             }

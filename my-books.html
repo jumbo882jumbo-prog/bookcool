@@ -194,8 +194,16 @@
                         }));
 
                         const map = new Map();
-                        [...formatted, ...allOrders].forEach(item => {
-                            if (!map.has(item.id)) map.set(item.id, item);
+                        formatted.forEach(item => map.set(item.id, item));
+                        allOrders.forEach(item => {
+                            if (!map.has(item.id)) {
+                                map.set(item.id, item);
+                            } else {
+                                const existing = map.get(item.id);
+                                if (item.status === 'approved') {
+                                    existing.status = 'approved';
+                                }
+                            }
                         });
                         allOrders = Array.from(map.values());
                     }

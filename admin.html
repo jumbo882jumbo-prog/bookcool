@@ -311,8 +311,36 @@
             return [...defaultBooks];
         }
 
-        function renderAdminBooks() {
-            const books = getStoredBooks();
+        async function renderAdminBooks() {
+            let books = getStoredBooks();
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const supaBooks = await window.bookcoolDb.getBooks();
+                    if (Array.isArray(supaBooks) && supaBooks.length > 0) {
+                        const formattedSupa = supaBooks.map(b => ({
+                            id: b.ebook_id,
+                            title: b.title,
+                            author: b.author_name,
+                            price: parseFloat(b.price) || 0,
+                            category: b.category_name || b.categories?.category_name || 'ทั่วไป',
+                            description: b.description || '',
+                            cover: b.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+                            isNew: true
+                        }));
+                        const map = new Map();
+                        [...formattedSupa, ...books].forEach(b => {
+                            if (!map.has(String(b.id))) map.set(String(b.id), b);
+                        });
+                        books = Array.from(map.values());
+                        try {
+                            localStorage.setItem('ebooks_store', JSON.stringify(books));
+                        } catch (e) {}
+                    }
+                }
+            } catch (err) {
+                console.warn('Load admin books from Supabase:', err.message);
+            }
+
             const countEl = document.getElementById('adminBookCount');
             if (countEl) countEl.innerText = `${books.length} เล่ม`;
 
@@ -372,17 +400,24 @@
             }).join('');
         }
 
-        function deleteBook(bookId) {
+        async function deleteBook(bookId) {
             let books = getStoredBooks();
             const target = books.find(b => String(b.id) === String(bookId));
             if (!target) return;
 
             if (confirm(`คุณต้องการลบหนังสือ "${target.title}" ออกจากระบบใช่หรือไม่?\n(หนังสือจะไม่แสดงบนหน้าแรกอีกต่อไป)`)) {
+                try {
+                    if (window.bookcoolDb && window.bookcoolDb.client) {
+                        await window.bookcoolDb.deleteBook(bookId);
+                    }
+                } catch (e) {
+                    console.warn('Cannot delete from Supabase:', e);
+                }
                 books = books.filter(b => String(b.id) !== String(bookId));
                 try {
                     localStorage.setItem('ebooks_store', JSON.stringify(books));
                 } catch (e) {}
-                renderAdminBooks();
+                await renderAdminBooks();
                 alert(`🗑️ ลบหนังสือ "${target.title}" สำเร็จ!`);
             }
         }
@@ -393,14 +428,15 @@
             const tableBody = document.getElementById('orderTableBody');
             if (!tableBody) return;
 
-            let orders = orderManager.getOrders();
+            let localOrders = orderManager.getOrders();
+            let remoteOrders = [];
 
             // ดึงข้อมูลคำสั่งซื้อสดจาก Supabase
             try {
                 if (window.bookcoolDb && window.bookcoolDb.client) {
                     const supaOrders = await window.bookcoolDb.getOrders();
                     if (Array.isArray(supaOrders) && supaOrders.length > 0) {
-                        const formatted = supaOrders.map(o => ({
+                        remoteOrders = supaOrders.map(o => ({
                             id: o.order_id,
                             customerName: o.customer_name,
                             customerEmail: o.customer_email,
@@ -409,6 +445,7 @@
                             status: o.status,
                             slipImage: o.slip_url,
                             date: new Date(o.order_date || o.created_at).toLocaleString('th-TH'),
+                            rawDate: o.order_date || o.created_at,
                             items: (o.order_items || []).map(item => ({
                                 id: item.ebook_id,
                                 title: item.book_title,
@@ -416,23 +453,52 @@
                                 quantity: item.quantity
                             }))
                         }));
-
-                        const map = new Map();
-                        [...formatted, ...orders].forEach(item => {
-                            if (!map.has(item.id)) map.set(item.id, item);
-                        });
-                        orders = Array.from(map.values());
                     }
                 }
             } catch (err) {
                 console.log('ℹ️ [Admin] โหลดออเดอร์โหมด Local:', err.message);
             }
 
+            // Merge orders อย่างแม่นยำ
+            const map = new Map();
+            // 1. ใส่ Remote Orders จาก Supabase
+            remoteOrders.forEach(item => {
+                map.set(item.id, item);
+            });
+            // 2. ซิงก์ Local Orders เข้าไป โดยไม่ให้สถานะ pending ถูกทับ
+            localOrders.forEach(item => {
+                if (!map.has(item.id)) {
+                    map.set(item.id, item);
+                } else {
+                    const existing = map.get(item.id);
+                    if (item.status === 'pending') {
+                        existing.status = 'pending';
+                    }
+                    if (item.slipImage && !existing.slipImage) {
+                        existing.slipImage = item.slipImage;
+                    }
+                }
+            });
+
+            let orders = Array.from(map.values());
+
+            // จัดเรียงออเดอร์:
+            // 1. รายการ "pending" (รอตรวจสอบสลิป) ต้องอยู่บนสุดเสมอ
+            // 2. เรียงตามวันที่ล่าสุด
+            orders.sort((a, b) => {
+                if (a.status === 'pending' && b.status !== 'pending') return -1;
+                if (b.status === 'pending' && a.status !== 'pending') return 1;
+                const timeA = new Date(a.rawDate || a.date || a.timestamp || 0).getTime() || 0;
+                const timeB = new Date(b.rawDate || b.date || b.timestamp || 0).getTime() || 0;
+                return timeB - timeA;
+            });
+
             // 1. คำนวณสถิติ Mini Cards
             const approvedOrders = orders.filter(o => o.status === 'approved');
             const pendingOrders = orders.filter(o => o.status === 'pending');
             
-            const totalSales = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 12000);
+            const totalApproved = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+            const totalSales = totalApproved + 12000;
             
             const totalSalesEl = document.getElementById('adminTotalSales');
             const totalOrdersEl = document.getElementById('adminTotalOrders');
@@ -440,7 +506,13 @@
 
             if (totalSalesEl) totalSalesEl.innerText = `฿${totalSales.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             if (totalOrdersEl) totalOrdersEl.innerText = `${orders.length} รายการ`;
-            if (pendingOrdersEl) pendingOrdersEl.innerText = `${pendingOrders.length} รายการ`;
+            if (pendingOrdersEl) {
+                if (pendingOrders.length > 0) {
+                    pendingOrdersEl.innerHTML = `<span class="text-amber-600 font-bold">${pendingOrders.length} รายการ</span> <span class="text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full ml-1 font-semibold animate-pulse">ต้องยืนยัน</span>`;
+                } else {
+                    pendingOrdersEl.innerText = `0 รายการ`;
+                }
+            }
 
             // 2. กรองตามคำค้นหา
             let filtered = orders;
@@ -570,9 +642,9 @@
             });
         }
 
-        function initAdminDashboard() {
-            renderAdminBooks();
-            renderAdminOrders();
+        async function initAdminDashboard() {
+            await renderAdminBooks();
+            await renderAdminOrders();
         }
 
         if (document.readyState === 'loading') {
