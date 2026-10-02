@@ -404,6 +404,18 @@
 
             if (error) throw error;
             return data;
+        },
+
+        // 14. เพิ่มผู้ใช้ใหม่ลงในตาราง users
+        async createUser(userData) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('users')
+                .insert([userData])
+                .select();
+
+            if (error) throw error;
+            return data && data[0] ? data[0] : null;
         }
     };
 

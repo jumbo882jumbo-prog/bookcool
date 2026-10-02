@@ -68,14 +68,83 @@ const auth = {
         return this.getCurrentUser() !== null;
     },
 
-    // ฟังก์ชันเข้าสู่ระบบ
-    login(usernameOrEmail, password, forcedRole = null) {
-        const accounts = this.getAllAccounts();
-        const user = accounts.find(acc => 
-            (acc.username.toLowerCase() === usernameOrEmail.toLowerCase().trim() || 
-             acc.email.toLowerCase() === usernameOrEmail.toLowerCase().trim()) &&
+    // การตั้งค่า Supabase
+    getSupabaseConfig() {
+        const defaultUrl = 'https://cowzufrrwntajvhiqajg.supabase.co';
+        const defaultKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvd3p1ZnJyd250YWp2aGlxYWpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjIwMDksImV4cCI6MjEwNjQzODAwOX0.9oVNjcWkNNfyhOO8cPKYSccQCU2kRV6z8L1ZX0Px0gs';
+        const saved = JSON.parse(localStorage.getItem('bookcool_supabase_config') || '{}');
+        return {
+            url: saved.url || (typeof window !== 'undefined' && window.ENV_SUPABASE_URL) || defaultUrl,
+            key: saved.key || (typeof window !== 'undefined' && window.ENV_SUPABASE_KEY) || defaultKey
+        };
+    },
+
+    // ซิงค์รายชื่อผู้ใช้จาก Supabase เข้าสู่ localStorage
+    async syncUsersFromSupabase() {
+        try {
+            const { url, key } = this.getSupabaseConfig();
+            const resp = await fetch(`${url}/rest/v1/users?select=*`, {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            });
+            if (!resp.ok) return;
+            const remoteUsers = await resp.json();
+            if (Array.isArray(remoteUsers) && remoteUsers.length > 0) {
+                const localUsers = this.getAllAccounts();
+                const merged = [...localUsers];
+                
+                remoteUsers.forEach(ru => {
+                    const idx = merged.findIndex(lu => 
+                        (lu.username && lu.username.toLowerCase() === (ru.username || '').toLowerCase()) ||
+                        (lu.email && lu.email.toLowerCase() === (ru.email || '').toLowerCase())
+                    );
+                    if (idx >= 0) {
+                        merged[idx] = { ...merged[idx], ...ru };
+                    } else {
+                        merged.push(ru);
+                    }
+                });
+                localStorage.setItem('registered_users', JSON.stringify(merged));
+            }
+        } catch (e) {
+            console.warn('Could not sync users from Supabase:', e);
+        }
+    },
+
+    // ฟังก์ชันเข้าสู่ระบบ (รองรับทั้ง localStorage และตรวจสอบสดกับ Supabase)
+    async login(usernameOrEmail, password, forcedRole = null) {
+        let accounts = this.getAllAccounts();
+        let user = accounts.find(acc => 
+            (acc.username && acc.username.toLowerCase() === usernameOrEmail.toLowerCase().trim() || 
+             acc.email && acc.email.toLowerCase() === usernameOrEmail.toLowerCase().trim()) &&
             acc.password === password
         );
+
+        // หากหาใน Local ไม่พบ ให้ลองดึงสดจาก Supabase public.users
+        if (!user) {
+            try {
+                const { url, key } = this.getSupabaseConfig();
+                const term = encodeURIComponent(usernameOrEmail.trim());
+                const resp = await fetch(`${url}/rest/v1/users?or=(username.ilike.${term},email.ilike.${term})&password=eq.${encodeURIComponent(password)}`, {
+                    headers: {
+                        'apikey': key,
+                        'Authorization': `Bearer ${key}`
+                    }
+                });
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        user = data[0];
+                        accounts.push(user);
+                        localStorage.setItem('registered_users', JSON.stringify(accounts));
+                    }
+                }
+            } catch (e) {
+                console.warn('Supabase login query error:', e);
+            }
+        }
 
         if (!user) {
             return { success: false, message: 'ชื่อผู้ใช้/อีเมล หรือรหัสผ่านไม่ถูกต้อง' };
@@ -105,12 +174,12 @@ const auth = {
         return { success: false, message: 'ไม่พบบัญชีสำหรับบทบาทนี้' };
     },
 
-    // สมัครสมาชิกใหม่
-    register(name, email, username, password, role = 'user') {
+    // สมัครสมาชิกใหม่ (บันทึกลงทั้ง LocalStorage และ Supabase users table)
+    async register(name, email, username, password, role = 'user') {
         const accounts = this.getAllAccounts();
         const exists = accounts.some(a => 
-            a.username.toLowerCase() === username.toLowerCase().trim() ||
-            a.email.toLowerCase() === email.toLowerCase().trim()
+            (a.username && a.username.toLowerCase() === username.toLowerCase().trim()) ||
+            (a.email && a.email.toLowerCase() === email.toLowerCase().trim())
         );
 
         if (exists) {
@@ -119,13 +188,61 @@ const auth = {
 
         const newUser = {
             username: username.trim(),
+            name: name.trim(),
             email: email.trim(),
             password: password,
-            name: name.trim(),
             role: role,
             avatar: name.trim().substring(0, 2)
         };
 
+        // 1. บันทึกข้อมูลไปยังตาราง users ใน Supabase ทันที
+        try {
+            const { url, key } = this.getSupabaseConfig();
+            
+            // เช็คกับตาราง users ใน Supabase เพื่อป้องกันชื่อซ้ำ
+            const checkTerm = encodeURIComponent(username.trim());
+            const checkEmail = encodeURIComponent(email.trim());
+            const checkResp = await fetch(`${url}/rest/v1/users?or=(username.ilike.${checkTerm},email.ilike.${checkEmail})`, {
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`
+                }
+            });
+            if (checkResp.ok) {
+                const existingRemote = await checkResp.json();
+                if (Array.isArray(existingRemote) && existingRemote.length > 0) {
+                    return { success: false, message: 'ชื่อผู้ใช้หรืออีเมลนี้มีอยู่ในฐานข้อมูล Supabase แล้ว' };
+                }
+            }
+
+            // บันทึกผู้ใช้เข้าสู่ Supabase public.users
+            const resp = await fetch(`${url}/rest/v1/users`, {
+                method: 'POST',
+                headers: {
+                    'apikey': key,
+                    'Authorization': `Bearer ${key}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=representation'
+                },
+                body: JSON.stringify(newUser)
+            });
+
+            if (resp.ok) {
+                const inserted = await resp.json();
+                if (Array.isArray(inserted) && inserted.length > 0) {
+                    newUser.user_id = inserted[0].user_id;
+                    newUser.created_at = inserted[0].created_at;
+                    console.log('✅ บันทึกผู้ใช้เข้า Supabase public.users สำเร็จ:', inserted[0]);
+                }
+            } else {
+                const errData = await resp.json().catch(() => ({}));
+                console.warn('⚠️ Supabase users insert error:', errData);
+            }
+        } catch (e) {
+            console.error('❌ เกิดข้อผิดพลาดในการเชื่อมต่อ Supabase users:', e);
+        }
+
+        // 2. บันทึกลง LocalStorage
         accounts.push(newUser);
         localStorage.setItem('registered_users', JSON.stringify(accounts));
         localStorage.setItem('current_user', JSON.stringify(newUser));
@@ -476,10 +593,11 @@ const orderManager = {
     }
 };
 
-// สั่งให้อัปเดต Navbar และตะกร้าทันทีเมื่อโหลดหน้าเว็บ
+// สั่งให้อัปเดต Navbar, ตะกร้า และซิงค์ผู้ใช้จาก Supabase ทันทีเมื่อโหลดหน้าเว็บ
 function initAppAuthAndCart() {
     auth.updateNavbarUI();
     cartManager.updateCartBadges();
+    auth.syncUsersFromSupabase();
 }
 
 if (document.readyState === 'loading') {

@@ -14,6 +14,9 @@
             font-family: 'Prompt', sans-serif;
         }
     </style>
+    <!-- โหลด Supabase JS SDK และ supabase-browser.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
     <!-- โหลด auth.js -->
     <script src="auth.js"></script>
 </head>
@@ -166,42 +169,80 @@
         }
 
         // ประมวลผลการกดเข้าสู่ระบบปกติ (ต้องใช้ชื่อผู้ใช้และรหัสผ่าน)
-        function handleLoginForm(event) {
+        async function handleLoginForm(event) {
             event.preventDefault();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span>⏳</span> กำลังตรวจสอบ...';
+            }
+
             const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
 
-            const res = auth.login(username, password);
-            if (res.success) {
-                const u = res.user;
-                alert(`🎉 เข้าสู่ระบบสำเร็จ!\nยินดีต้อนรับ: "${u.name}" (${u.role === 'admin' ? 'ผู้ดูแลระบบ Admin' : 'สมาชิกทั่วไป'})`);
+            try {
+                const res = await auth.login(username, password);
+                if (res.success) {
+                    const u = res.user;
+                    alert(`🎉 เข้าสู่ระบบสำเร็จ!\nยินดีต้อนรับ: "${u.name}" (${u.role === 'admin' ? 'ผู้ดูแลระบบ Admin' : 'สมาชิกทั่วไป'})`);
 
-                const isAdminTarget = redirectUrl.includes('admin') || redirectUrl.includes('add-book') || redirectUrl.includes('reports') || redirectUrl.includes('sql-console');
-                if (u.role === 'admin') {
-                    window.location.href = isAdminTarget ? redirectUrl : 'admin.html';
+                    const isAdminTarget = redirectUrl.includes('admin') || redirectUrl.includes('add-book') || redirectUrl.includes('reports') || redirectUrl.includes('sql-console');
+                    if (u.role === 'admin') {
+                        window.location.href = isAdminTarget ? redirectUrl : 'admin.html';
+                    } else {
+                        window.location.href = isAdminTarget ? 'index.html' : redirectUrl;
+                    }
                 } else {
-                    window.location.href = isAdminTarget ? 'index.html' : redirectUrl;
+                    alert('❌ เข้าสู่ระบบไม่สำเร็จ: ' + res.message);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
                 }
-            } else {
-                alert('❌ เข้าสู่ระบบไม่สำเร็จ: ' + res.message);
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาด: ' + (err.message || err));
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
             }
         }
 
-        // ประมวลผลการสมัครสมาชิกใหม่
-        function handleRegisterForm(event) {
+        // ประมวลผลการสมัครสมาชิกใหม่ (บันทึกลง Supabase users และ LocalStorage)
+        async function handleRegisterForm(event) {
             event.preventDefault();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span>⏳</span> กำลังบันทึกข้อมูลเข้าสู่ระบบและ Supabase...';
+            }
+
             const name = document.getElementById('regName').value.trim();
             const email = document.getElementById('regEmail').value.trim();
             const username = document.getElementById('regUsername').value.trim();
             const password = document.getElementById('regPassword').value;
             const role = (document.getElementById('regRole') ? document.getElementById('regRole').value : 'user') || 'user';
 
-            const res = auth.register(name, email, username, password, role);
-            if (res.success) {
-                alert(`🎉 สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!\nยินดีต้อนรับคุณ "${name}"`);
-                window.location.href = 'index.html';
-            } else {
-                alert('❌ เกิดข้อผิดพลาด: ' + res.message);
+            try {
+                const res = await auth.register(name, email, username, password, role);
+                if (res.success) {
+                    alert(`🎉 สมัครสมาชิกและเข้าสู่ระบบสำเร็จ!\nข้อมูลถูกบันทึกลงในระบบและฐานข้อมูล Supabase เรียบร้อยแล้ว\nยินดีต้อนรับคุณ "${name}"`);
+                    window.location.href = 'index.html';
+                } else {
+                    alert('❌ เกิดข้อผิดพลาด: ' + res.message);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                }
+            } catch (err) {
+                alert('❌ เกิดข้อผิดพลาด: ' + (err.message || err));
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
             }
         }
     </script>
