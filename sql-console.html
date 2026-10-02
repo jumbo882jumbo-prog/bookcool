@@ -819,8 +819,11 @@ ORDER BY total_spent DESC;`
             try {
                 let results = null;
 
-                // แก้ไขกรณีที่พิมพ์ SUM(total) หรือ AVG(total) เพื่อหลบ keyword ของ AlaSQL
+                // แปลงฟังก์ชันให้เข้ากันได้ทั้ง PostgreSQL (Supabase) และ AlaSQL
                 let queryToRun = rawSql
+                    .replace(/\bDATE\(\s*order_date\s*\)/gi, 'SUBSTRING(order_date, 1, 10)')
+                    .replace(/\border_date::date\b/gi, 'SUBSTRING(order_date, 1, 10)')
+                    .replace(/\border_date::text\b/gi, 'order_date')
                     .replace(/\bSUM\(\s*total\s*\)/gi, 'SUM(total_amount)')
                     .replace(/\bAVG\(\s*total\s*\)/gi, 'AVG(total_amount)')
                     .replace(/\bCOUNT\(\s*total\s*\)/gi, 'COUNT(total_amount)');
