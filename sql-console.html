@@ -24,6 +24,9 @@
     <script>
         auth.protectAdminPage();
     </script>
+    <!-- Supabase Client & bookcool Database SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
@@ -464,77 +467,145 @@
         let currentQueryResult = null;
         let queryHistory = [];
 
-        // ฟังก์ชันสร้างและซิงก์ข้อมูลจาก LocalStorage เข้าสู่ In-Memory Database (AlaSQL)
-        function refreshDatabase(showAlert = false) {
+        // ฟังก์ชันสร้างและซิงก์ข้อมูลจาก Supabase / LocalStorage เข้าสู่ In-Memory Database (AlaSQL)
+        async function refreshDatabase(showAlert = false) {
             try {
-                // 1. ดึงข้อมูลหนังสือ (ebooks)
-                let books = [];
-                try {
-                    const rawBooks = localStorage.getItem('ebooks_store');
-                    if (rawBooks) books = JSON.parse(rawBooks);
-                } catch (e) {}
+                let sqlBooks = [];
+                let sqlOrders = [];
+                let sqlOrderItems = [];
+                let sqlUsers = [];
+                let sqlCategories = [];
 
-                if (!books || books.length === 0) {
-                    // Fallback ค่าเริ่มต้น 8 เล่มตามหน้าเว็บไซต์
-                    books = [
-                        { id: 1, title: 'Lean Startup & Product Strategy', author: 'ณัฐพร นวัตกรรม', category: 'ธุรกิจ & การตลาด', price: 320.00, description: 'คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ' },
-                        { id: 2, title: 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', author: 'กวี ศรีสยาม', category: 'วรรณกรรม & นวนิยาย', price: 195.00, description: 'นวนิยายไซไฟแฟนตาซี การเดินทางข้ามห้วงกาลเวลาเพื่อกอบกู้ดวงดาวที่สาบสูญ' },
-                        { id: 3, title: 'Practical Generative AI for Developers', author: 'ดร. ธีรภัทร ปัญญาประดิษฐ์', category: 'วิทยาศาสตร์ข้อมูล & AI', price: 490.00, description: 'คู่มือนักพัฒนาในการเชื่อมต่อ LLM APIs, Prompt Engineering, RAG Architecture และการสร้าง AI Agents' },
-                        { id: 4, title: 'The Modern Growth Hacking & Digital Marketing', author: 'อนันต์ การตลาดดิจิทัล', category: 'ธุรกิจ & การตลาด', price: 390.00, description: 'กลยุทธ์ยิงแอดและสร้าง Funnel ปิดการขายอัตโนมัติ สำหรับธุรกิจออนไลน์ที่ต้องการสเกลยอดขาย' },
-                        { id: 5, title: 'จิตวิทยาการบริหารเวลา Focus & Productivity', author: 'พญ. ธิดารัตน์ สุขภาพจิต', category: 'พัฒนาตนเอง & จิตวิทยา', price: 250.00, description: 'เคล็ดลับทางประสาทวิทยาในการกำจัดนิสัยผลัดวันประกันพรุ่งและโฟกัสกับงานสำคัญอย่างเด็ดขาด' },
-                        { id: 6, title: 'คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน', author: 'ชัชวาล เศรษฐศาสตร์', category: 'การเงิน & การลงทุน', price: 290.00, description: 'เข้าใจการลดหย่อนภาษีอย่างถูกต้อง พร้อมกลยุทธ์สร้างอิสรภาพทางการเงินผ่านกองทุนรวมและหุ้นปันผล' },
-                        { id: 7, title: 'Full-Stack Web Development with Python & Modern Stack', author: 'อาจารย์ พรชัย เทคโนโลยี', category: 'เทคโนโลยี & การเขียนโปรแกรม', price: 420.00, description: 'สร้างเว็บแอปพลิเคชันระดับโปรดักชันด้วย Flask, RESTful API และฐานข้อมูล พร้อมการทำ Deployment' },
-                        { id: 8, title: 'Mastering Database Design & SQL', author: 'ดร. กิตติพงษ์ วิริยะกุล', category: 'เทคโนโลยี & การเขียนโปรแกรม', price: 299.00, description: 'เจาะลึกการออกแบบฐานข้อมูลเชิงสัมพันธ์ตั้งแต่ระดับพื้นฐาน Normalization 3NF จนถึงการ Optimize Query' }
-                    ];
+                // ⚡ พยายามดึงข้อมูลสดจาก Supabase ก่อนเป็นอันดับแรก
+                let fetchedFromSupabase = false;
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    try {
+                        const { data: supaBooks } = await window.bookcoolDb.client.from('ebooks').select('*');
+                        const { data: supaOrders } = await window.bookcoolDb.client.from('orders').select('*');
+                        const { data: supaItems } = await window.bookcoolDb.client.from('order_items').select('*');
+                        const { data: supaCats } = await window.bookcoolDb.client.from('categories').select('*');
+                        const { data: supaUsers } = await window.bookcoolDb.client.from('users').select('*');
+
+                        if (supaBooks && supaBooks.length > 0) {
+                            sqlBooks = supaBooks.map(b => ({
+                                ebook_id: Number(b.ebook_id),
+                                title: String(b.title || ''),
+                                author_name: String(b.author_name || 'ไม่ระบุ'),
+                                category_name: String(b.category_name || 'ทั่วไป'),
+                                price: parseFloat(b.price) || 0.00,
+                                description: String(b.description || '')
+                            }));
+                        }
+
+                        if (supaItems && supaItems.length > 0) {
+                            sqlOrderItems = supaItems.map(item => ({
+                                item_id: Number(item.item_id),
+                                order_id: String(item.order_id),
+                                ebook_id: Number(item.ebook_id || 1),
+                                book_title: String(item.book_title || ''),
+                                price: parseFloat(item.price) || 0.00,
+                                quantity: Number(item.quantity || 1)
+                            }));
+                        }
+
+                        if (supaOrders && supaOrders.length > 0) {
+                            sqlOrders = supaOrders.map(o => ({
+                                order_id: String(o.order_id),
+                                customer_name: String(o.customer_name || 'ลูกค้าทั่วไป'),
+                                customer_email: String(o.customer_email || 'user@bookcool.com'),
+                                total: parseFloat(o.total_amount) || 0.00,
+                                total_amount: parseFloat(o.total_amount) || 0.00,
+                                status: String(o.status || 'pending'),
+                                order_date: String(o.order_date || '2026-10-01 12:00')
+                            }));
+                        }
+
+                        if (supaCats && supaCats.length > 0) {
+                            sqlCategories = supaCats.map(c => ({
+                                category_id: Number(c.category_id),
+                                category_name: String(c.category_name),
+                                book_count: 1
+                            }));
+                        }
+
+                        if (supaUsers && supaUsers.length > 0) {
+                            sqlUsers = supaUsers.map(u => ({
+                                user_id: Number(u.user_id),
+                                username: String(u.username),
+                                name: String(u.name || ''),
+                                email: String(u.email || ''),
+                                role: String(u.role || 'user')
+                            }));
+                        }
+
+                        if (sqlBooks.length > 0 || sqlOrders.length > 0) {
+                            fetchedFromSupabase = true;
+                            console.log('⚡ [SQL Console] ซิงก์ข้อมูลสดจาก Supabase เรียบร้อย');
+                        }
+                    } catch (supaErr) {
+                        console.warn('⚠️ ไม่สามารถดึงข้อมูลสดจาก Supabase ได้ ใช้ Local Storage สำรอง:', supaErr.message);
+                    }
                 }
 
-                // ปรับฟิลด์ให้เป็นมาตรฐาน SQL
-                const sqlBooks = books.map((b, idx) => ({
-                    ebook_id: Number(b.id || idx + 1),
-                    title: String(b.title || ''),
-                    author_name: String(b.author || 'ไม่ระบุ'),
-                    category_name: String(b.category || 'ทั่วไป'),
-                    price: parseFloat(b.price) || 0.00,
-                    description: String(b.description || '')
-                }));
+                // หากยังไม่ได้ข้อมูลจาก Supabase ให้ใช้ LocalStorage สำรอง
+                if (!fetchedFromSupabase || sqlBooks.length === 0) {
+                    let books = [];
+                    try {
+                        const rawBooks = localStorage.getItem('ebooks_store');
+                        if (rawBooks) books = JSON.parse(rawBooks);
+                    } catch (e) {}
 
-                // 2. ดึงข้อมูลคำสั่งซื้อ (orders และ order_items)
-                let orders = [];
-                try {
-                    const rawOrders = localStorage.getItem('orders_list');
-                    if (rawOrders) orders = JSON.parse(rawOrders);
-                } catch (e) {}
+                    if (!books || books.length === 0) {
+                        books = [
+                            { id: 1, title: 'Lean Startup & Product Strategy', author: 'ณัฐพร นวัตกรรม', category: 'ธุรกิจ & การตลาด', price: 320.00, description: 'คู่มือทดสอบไอเดียธุรกิจ' },
+                            { id: 2, title: 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', author: 'กวี ศรีสยาม', category: 'วรรณกรรม & นวนิยาย', price: 195.00, description: 'นวนิยายไซไฟแฟนตาซี' }
+                        ];
+                    }
 
-                if (!orders || orders.length === 0) {
-                    orders = (typeof defaultOrders !== 'undefined') ? defaultOrders : [];
+                    sqlBooks = books.map((b, idx) => ({
+                        ebook_id: Number(b.id || idx + 1),
+                        title: String(b.title || ''),
+                        author_name: String(b.author || 'ไม่ระบุ'),
+                        category_name: String(b.category || 'ทั่วไป'),
+                        price: parseFloat(b.price) || 0.00,
+                        description: String(b.description || '')
+                    }));
                 }
 
-                const sqlOrders = [];
-                const sqlOrderItems = [];
-                let itemIndex = 1;
+                if (!fetchedFromSupabase || sqlOrders.length === 0) {
+                    let orders = [];
+                    try {
+                        const rawOrders = localStorage.getItem('orders_list');
+                        if (rawOrders) orders = JSON.parse(rawOrders);
+                    } catch (e) {}
+                    if (!orders || orders.length === 0) {
+                        orders = (typeof defaultOrders !== 'undefined') ? defaultOrders : [];
+                    }
 
-                orders.forEach(o => {
-                    sqlOrders.push({
-                        order_id: String(o.id),
-                        customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
-                        customer_email: String(o.customerEmail || 'user@bookcool.com'),
-                        total: parseFloat(o.total) || 0.00,
-                        total_amount: parseFloat(o.total) || 0.00,
-                        status: String(o.status || 'pending'),
-                        order_date: String(o.date || '2026-10-01 12:00')
-                    });
-
-                    (o.items || []).forEach(item => {
-                        sqlOrderItems.push({
-                            item_id: itemIndex++,
+                    let itemIndex = 1;
+                    orders.forEach(o => {
+                        sqlOrders.push({
                             order_id: String(o.id),
-                            ebook_id: Number(item.id || 1),
-                            book_title: String(item.title || ''),
-                            price: parseFloat(item.price) || 0.00,
-                            quantity: Number(item.quantity || 1)
+                            customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
+                            customer_email: String(o.customerEmail || 'user@bookcool.com'),
+                            total: parseFloat(o.total) || 0.00,
+                            total_amount: parseFloat(o.total) || 0.00,
+                            status: String(o.status || 'pending'),
+                            order_date: String(o.date || '2026-10-01 12:00')
+                        });
+
+                        (o.items || []).forEach(item => {
+                            sqlOrderItems.push({
+                                item_id: itemIndex++,
+                                order_id: String(o.id),
+                                ebook_id: Number(item.id || 1),
+                                book_title: String(item.title || ''),
+                                price: parseFloat(item.price) || 0.00,
+                                quantity: Number(item.quantity || 1)
+                            });
                         });
                     });
-                });
+                }
 
                 // 3. ดึงข้อมูลผู้ใช้งาน (users)
                 let users = [];
@@ -916,13 +987,13 @@ ORDER BY total_spent DESC;`
         });
 
         // เริ่มต้นโหลดฐานข้อมูลและคำสั่งแรกอัตโนมัติ
-        function initConsole() {
-            refreshDatabase();
+        async function initConsole() {
+            await refreshDatabase();
             // ตั้งค่าคำสั่งแรกเป็นตัวอย่าง
             const editor = document.getElementById('sqlInput');
             if (editor && !editor.value) {
                 editor.value = "SELECT * FROM ebooks ORDER BY price DESC;";
-                setTimeout(() => executeSQL(), 100);
+                setTimeout(() => executeSQL(), 200);
             }
         }
 
