@@ -551,19 +551,72 @@
             return data;
         },
 
-        // 11. เพิ่มสินค้าลงตะกร้าใน Supabase
+        // 11. เพิ่มสินค้าลงตะกร้าใน Supabase (พร้อมตรวจสอบสินค้าเดิมเพื่อเพิ่มจำนวน)
         async addToCartDb({ username = 'user', ebookId, bookTitle, price, quantity = 1 }) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            
+            // หา user_id ถ้ามีในตาราง users
+            let userId = 2; // ค่าเริ่มต้น user ทั่วไป
+            try {
+                const { data: uData } = await this.client.from('users').select('user_id').eq('username', username).maybeSingle();
+                if (uData && uData.user_id) userId = uData.user_id;
+            } catch (e) {}
+
+            const numEid = parseInt(String(ebookId).replace(/[^\d]/g, ''), 10) || 1;
+            const priceVal = parseFloat(price) || 0;
+
+            // ตรวจสอบว่ามีสินค้านี้ในตะกร้าของผู้ใช้คนนี้อยู่แล้วหรือไม่
+            try {
+                const { data: existing } = await this.client
+                    .from('cart_items')
+                    .select('cart_item_id, quantity')
+                    .eq('username', username)
+                    .eq('ebook_id', numEid)
+                    .maybeSingle();
+
+                if (existing) {
+                    const { data, error } = await this.client
+                        .from('cart_items')
+                        .update({
+                            quantity: (existing.quantity || 1) + (parseInt(quantity, 10) || 1),
+                            price: priceVal,
+                            book_title: bookTitle
+                        })
+                        .eq('cart_item_id', existing.cart_item_id)
+                        .select();
+                    if (error) throw error;
+                    return data;
+                }
+            } catch (checkErr) {
+                console.warn('Check existing cart_item note:', checkErr.message);
+            }
+
+            // ถ้ายังไม่มี ให้แทรกแถวใหม่
             const { data, error } = await this.client
                 .from('cart_items')
                 .insert([{
+                    user_id: userId,
                     username,
-                    ebook_id: ebookId,
+                    ebook_id: numEid,
                     book_title: bookTitle,
-                    price,
-                    quantity
+                    price: priceVal,
+                    quantity: parseInt(quantity, 10) || 1
                 }])
                 .select();
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 11.1 ลบสินค้า 1 รายการออกจากตะกร้าใน Supabase
+        async removeCartItemDb(username = 'user', ebookId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const numEid = parseInt(String(ebookId).replace(/[^\d]/g, ''), 10) || 1;
+            const { data, error } = await this.client
+                .from('cart_items')
+                .delete()
+                .eq('username', username)
+                .eq('ebook_id', numEid);
 
             if (error) throw error;
             return data;

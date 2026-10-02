@@ -419,6 +419,22 @@ const cartManager = {
             });
         }
         this.saveCart(cart);
+
+        // ซิงก์ลงตาราง cart_items ใน Supabase อัตโนมัติ
+        if (typeof window !== 'undefined' && window.bookcoolDb && window.bookcoolDb.client) {
+            const currentUser = (typeof auth !== 'undefined') ? auth.getCurrentUser() : null;
+            const username = currentUser ? currentUser.username : 'user';
+            const numId = parseInt(String(bookId).replace(/[^\d]/g, ''), 10) || 1;
+            window.bookcoolDb.addToCartDb({
+                username: username,
+                ebookId: numId,
+                bookTitle: book.title || 'หนังสือไม่มีชื่อ',
+                price: priceNum,
+                quantity: 1
+            }).then(() => console.log('🛒 [Supabase] ซิงก์สินค้าเข้า cart_items สำเร็จ'))
+              .catch(e => console.warn('Supabase addToCart sync note:', e.message));
+        }
+
         return cart;
     },
 
@@ -426,6 +442,19 @@ const cartManager = {
         let cart = this.getCart();
         cart = cart.filter(item => String(item.id) !== String(bookId));
         this.saveCart(cart);
+
+        // ลบออกจากตาราง cart_items ใน Supabase
+        if (typeof window !== 'undefined' && window.bookcoolDb && window.bookcoolDb.client) {
+            const currentUser = (typeof auth !== 'undefined') ? auth.getCurrentUser() : null;
+            const username = currentUser ? currentUser.username : 'user';
+            const numId = parseInt(String(bookId).replace(/[^\d]/g, ''), 10) || 1;
+            if (typeof window.bookcoolDb.removeCartItemDb === 'function') {
+                window.bookcoolDb.removeCartItemDb(username, numId)
+                    .then(() => console.log('🗑️ [Supabase] ลบสินค้าออกจาก cart_items สำเร็จ'))
+                    .catch(e => console.warn('Supabase removeCartItem note:', e.message));
+            }
+        }
+
         return cart;
     },
 
@@ -433,6 +462,47 @@ const cartManager = {
         localStorage.removeItem('cart_items');
         this.updateCartBadges();
         window.dispatchEvent(new Event('cartUpdated'));
+
+        // ล้างตะกร้าในตาราง cart_items ใน Supabase
+        if (typeof window !== 'undefined' && window.bookcoolDb && window.bookcoolDb.client) {
+            const currentUser = (typeof auth !== 'undefined') ? auth.getCurrentUser() : null;
+            const username = currentUser ? currentUser.username : 'user';
+            if (typeof window.bookcoolDb.clearCartDb === 'function') {
+                window.bookcoolDb.clearCartDb(username)
+                    .then(() => console.log('🧹 [Supabase] ล้างตะกร้า cart_items เรียบร้อย'))
+                    .catch(e => console.warn('Supabase clearCart note:', e.message));
+            }
+        }
+    },
+
+    async syncFromSupabase() {
+        if (typeof window === 'undefined' || !window.bookcoolDb || !window.bookcoolDb.client) return;
+        try {
+            const currentUser = (typeof auth !== 'undefined') ? auth.getCurrentUser() : null;
+            const username = currentUser ? currentUser.username : 'user';
+            const supaItems = await window.bookcoolDb.getCartItems(username);
+            
+            if (Array.isArray(supaItems) && supaItems.length > 0) {
+                const localCart = this.getCart();
+                // ถ้า LocalStorage ยังไม่มีรายการ ให้ดึงจาก Supabase มาใส่ตะกร้าทันที
+                if (localCart.length === 0) {
+                    const formatted = supaItems.map(it => ({
+                        id: String(it.ebook_id),
+                        title: it.book_title || 'หนังสือสั่งซื้อ',
+                        author: 'นักเขียนคุณภาพ',
+                        price: parseFloat(it.price) || 0,
+                        cover: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+                        category: 'ทั่วไป',
+                        quantity: parseInt(it.quantity, 10) || 1
+                    }));
+                    localStorage.setItem('cart_items', JSON.stringify(formatted));
+                    this.updateCartBadges();
+                    window.dispatchEvent(new Event('cartUpdated'));
+                }
+            }
+        } catch (err) {
+            console.warn('ℹ️ [Cart] ซิงก์ตะกร้าจาก Supabase:', err.message);
+        }
     },
 
     getCartCount() {
@@ -618,11 +688,14 @@ const orderManager = {
     }
 };
 
-// สั่งให้อัปเดต Navbar, ตะกร้า และซิงค์ผู้ใช้จาก Supabase ทันทีเมื่อโหลดหน้าเว็บ
+// สั่งให้อัปเดต Navbar, ตะกร้า และซิงค์ผู้ใช้/ตะกร้าจาก Supabase ทันทีเมื่อโหลดหน้าเว็บ
 function initAppAuthAndCart() {
     auth.updateNavbarUI();
     cartManager.updateCartBadges();
     auth.syncUsersFromSupabase();
+    if (typeof cartManager.syncFromSupabase === 'function') {
+        cartManager.syncFromSupabase();
+    }
 }
 
 if (document.readyState === 'loading') {
