@@ -210,17 +210,35 @@
         },
 
         // 4. สร้างคำสั่งซื้อใหม่ (บันทึกลง orders และ order_items)
-        async createOrder({ orderId, userId, customerName, customerEmail, totalAmount, slipUrl = '', items = [] }) {
+        async createOrder({ orderId, userId, customerName, customerEmail, customerUsername, totalAmount, slipUrl = '', items = [] }) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+
+            // หาหรือสร้าง profile UUID ให้สอดคล้องกับตาราง profiles/user_library
+            let resolvedUserId = userId;
+            if (!resolvedUserId && (customerEmail || customerUsername)) {
+                try {
+                    if (customerEmail) {
+                        const { data: p } = await this.client.from('profiles').select('id').eq('email', customerEmail).maybeSingle();
+                        if (p && p.id) resolvedUserId = p.id;
+                    }
+                    if (!resolvedUserId && customerUsername) {
+                        const { data: p } = await this.client.from('profiles').select('id').eq('username', customerUsername).maybeSingle();
+                        if (p && p.id) resolvedUserId = p.id;
+                    }
+                } catch (e) {
+                    console.warn('Could not resolve profile for order:', e);
+                }
+            }
 
             // บันทึกลงตาราง orders
             const { data: orderData, error: orderError } = await this.client
                 .from('orders')
                 .insert([{
                     order_id: orderId,
-                    user_id: userId || null,
+                    user_id: resolvedUserId || null,
                     customer_name: customerName,
                     customer_email: customerEmail,
+                    customer_username: customerUsername || 'user',
                     total_amount: totalAmount,
                     status: 'pending',
                     slip_url: slipUrl,
@@ -277,23 +295,77 @@
                 .from('orders')
                 .update({ status: 'approved' })
                 .eq('order_id', orderId)
-                .select('*, order_items(*)')
+                .select('*')
                 .single();
 
             if (updateError) throw updateError;
 
-            // เพิ่มหนังสือลงใน user_library
-            if (order && order.user_id && order.order_items) {
-                const libraryEntries = order.order_items.map(item => ({
-                    user_id: order.user_id,
-                    ebook_id: item.ebook_id,
-                    order_id: orderId,
-                    access_granted_at: new Date().toISOString()
-                }));
+            // ดึงรายการหนังสือในบิลนี้
+            let items = [];
+            const { data: directItems } = await this.client
+                .from('order_items')
+                .select('*')
+                .eq('order_id', orderId);
+            if (directItems && directItems.length > 0) {
+                items = directItems;
+            }
 
-                await this.client
-                    .from('user_library')
-                    .upsert(libraryEntries, { onConflict: 'user_id,ebook_id' });
+            // หา UUID ของผู้ใช้สำหรับผูกใน user_library
+            let targetUserId = order?.user_id;
+
+            if (!targetUserId && order) {
+                // ค้นหาจากอีเมลหรือ username ใน profiles
+                if (order.customer_email) {
+                    const { data: p } = await this.client.from('profiles').select('id').eq('email', order.customer_email).maybeSingle();
+                    if (p && p.id) targetUserId = p.id;
+                }
+                if (!targetUserId && order.customer_username) {
+                    const { data: p } = await this.client.from('profiles').select('id').eq('username', order.customer_username).maybeSingle();
+                    if (p && p.id) targetUserId = p.id;
+                }
+                // ถ้ายังไม่มี profile ให้สร้างโปรไฟล์ใหม่ลงใน profiles
+                if (!targetUserId) {
+                    const newId = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : 'b0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22';
+                    const { data: createdProf } = await this.client
+                        .from('profiles')
+                        .insert([{
+                            id: newId,
+                            username: order.customer_username || (order.customer_email ? order.customer_email.split('@')[0] : 'customer'),
+                            full_name: order.customer_name || 'ลูกค้าทั่วไป',
+                            email: order.customer_email || 'customer@bookcool.com',
+                            role: 'user'
+                        }])
+                        .select()
+                        .maybeSingle();
+                    if (createdProf && createdProf.id) targetUserId = createdProf.id;
+                }
+            }
+
+            // Fallback ถ้ายังไม่มี ให้ผูกกับโปรไฟล์แรกสุดในระบบ
+            if (!targetUserId) {
+                const { data: anyProf } = await this.client.from('profiles').select('id').limit(1).maybeSingle();
+                if (anyProf && anyProf.id) targetUserId = anyProf.id;
+            }
+
+            // เพิ่มหนังสือลงใน user_library
+            if (targetUserId && items.length > 0) {
+                for (const item of items) {
+                    if (item.ebook_id) {
+                        try {
+                            await this.client
+                                .from('user_library')
+                                .insert([{
+                                    user_id: targetUserId,
+                                    ebook_id: item.ebook_id,
+                                    order_id: orderId,
+                                    access_type: 'purchased',
+                                    access_granted_at: new Date().toISOString()
+                                }]);
+                        } catch (libErr) {
+                            console.warn('user_library insert error:', libErr);
+                        }
+                    }
+                }
             }
 
             return order;

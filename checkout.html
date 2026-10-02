@@ -279,6 +279,7 @@
                                 userId: currentUser?.id || null,
                                 customerName: customerInfo.name,
                                 customerEmail: customerInfo.email,
+                                customerUsername: currentUser?.username || customerInfo.username || 'user',
                                 totalAmount: checkoutTotal,
                                 slipUrl: slipDataUrl || '',
                                 items: checkoutCart
