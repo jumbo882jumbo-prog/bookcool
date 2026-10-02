@@ -577,20 +577,22 @@
                     alasql('CREATE TABLE users');
                     alasql('CREATE TABLE categories');
 
-                    if (sqlBooks && sqlBooks.length > 0) alasql('INSERT INTO ebooks VALUES ?', [sqlBooks]);
-                    if (sqlOrders && sqlOrders.length > 0) alasql('INSERT INTO orders VALUES ?', [sqlOrders]);
-                    if (sqlOrderItems && sqlOrderItems.length > 0) alasql('INSERT INTO order_items VALUES ?', [sqlOrderItems]);
-                    if (sqlUsers && sqlUsers.length > 0) alasql('INSERT INTO users VALUES ?', [sqlUsers]);
-                    if (sqlCategories && sqlCategories.length > 0) alasql('INSERT INTO categories VALUES ?', [sqlCategories]);
+                    // กำหนดชุดข้อมูลอาร์เรย์เข้าตารางโดยตรงในหน่วยความจำ (Direct memory table assignment)
+                    // เพื่อให้ทุกคอลัมน์และทุกแถวสามารถ Query, Group by, และ Join ได้อย่างถูกต้อง
+                    alasql.tables.ebooks.data = sqlBooks || [];
+                    alasql.tables.orders.data = sqlOrders || [];
+                    alasql.tables.order_items.data = sqlOrderItems || [];
+                    alasql.tables.users.data = sqlUsers || [];
+                    alasql.tables.categories.data = sqlCategories || [];
                 } catch (tblErr) {
-                    console.warn("AlaSQL standard insert error, fallback to memory tables:", tblErr);
+                    console.warn("AlaSQL table assignment warning:", tblErr);
                     const curDb = (alasql.databases && alasql.databases[alasql.useid]) || (alasql.databases && alasql.databases.alasql);
                     if (curDb && curDb.tables) {
-                        if (curDb.tables.ebooks) curDb.tables.ebooks.data = sqlBooks;
-                        if (curDb.tables.orders) curDb.tables.orders.data = sqlOrders;
-                        if (curDb.tables.order_items) curDb.tables.order_items.data = sqlOrderItems;
-                        if (curDb.tables.users) curDb.tables.users.data = sqlUsers;
-                        if (curDb.tables.categories) curDb.tables.categories.data = sqlCategories;
+                        if (curDb.tables.ebooks) curDb.tables.ebooks.data = sqlBooks || [];
+                        if (curDb.tables.orders) curDb.tables.orders.data = sqlOrders || [];
+                        if (curDb.tables.order_items) curDb.tables.order_items.data = sqlOrderItems || [];
+                        if (curDb.tables.users) curDb.tables.users.data = sqlUsers || [];
+                        if (curDb.tables.categories) curDb.tables.categories.data = sqlCategories || [];
                     }
                 }
             }
@@ -828,8 +830,19 @@ ORDER BY total_spent DESC;`
                     .replace(/\bAVG\(\s*total\s*\)/gi, 'AVG(total_amount)')
                     .replace(/\bCOUNT\(\s*total\s*\)/gi, 'COUNT(total_amount)');
 
+                // ตัดคอมเมนต์บรรทัดและบล็อกออกเพื่อให้ AlaSQL รันได้อย่างแม่นยำ
+                let cleanedQuery = queryToRun
+                    .replace(/--.*$/gm, '')
+                    .replace(/\/\*[\s\S]*?\*\//g, '')
+                    .trim();
+
                 if (window.alasql) {
-                    results = alasql(queryToRun);
+                    try {
+                        results = alasql(cleanedQuery);
+                    } catch (alaErr) {
+                        console.warn("Cleaned AlaSQL run failed, trying original:", alaErr);
+                        results = alasql(queryToRun);
+                    }
                 } else {
                     // Fallback กรณีที่ CDN AlaSQL โหลดไม่ได้
                     results = executeFallbackSQL(queryToRun);
