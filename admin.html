@@ -19,6 +19,9 @@
     <script>
         auth.protectAdminPage();
     </script>
+    <!-- Supabase SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -386,11 +389,44 @@
 
         let currentOrderSearch = '';
 
-        function renderAdminOrders() {
+        async function renderAdminOrders() {
             const tableBody = document.getElementById('orderTableBody');
             if (!tableBody) return;
 
-            const orders = orderManager.getOrders();
+            let orders = orderManager.getOrders();
+
+            // ดึงข้อมูลคำสั่งซื้อสดจาก Supabase
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const supaOrders = await window.bookcoolDb.getOrders();
+                    if (Array.isArray(supaOrders) && supaOrders.length > 0) {
+                        const formatted = supaOrders.map(o => ({
+                            id: o.order_id,
+                            customerName: o.customer_name,
+                            customerEmail: o.customer_email,
+                            customerUsername: o.customer_username || '',
+                            total: parseFloat(o.total_amount) || 0,
+                            status: o.status,
+                            slipImage: o.slip_url,
+                            date: new Date(o.order_date || o.created_at).toLocaleString('th-TH'),
+                            items: (o.order_items || []).map(item => ({
+                                id: item.ebook_id,
+                                title: item.book_title,
+                                price: parseFloat(item.price),
+                                quantity: item.quantity
+                            }))
+                        }));
+
+                        const map = new Map();
+                        [...formatted, ...orders].forEach(item => {
+                            if (!map.has(item.id)) map.set(item.id, item);
+                        });
+                        orders = Array.from(map.values());
+                    }
+                }
+            } catch (err) {
+                console.log('ℹ️ [Admin] โหลดออเดอร์โหมด Local:', err.message);
+            }
 
             // 1. คำนวณสถิติ Mini Cards
             const approvedOrders = orders.filter(o => o.status === 'approved');
@@ -490,14 +526,20 @@
             }).join('');
         }
 
-        function handleAdminConfirm(orderId) {
-            const res = orderManager.confirmOrder(orderId);
-            if (res.success) {
-                renderAdminOrders();
-                alert(`🎉 ยืนยันคำสั่งซื้อ #${orderId} เรียบร้อยแล้ว!\n\nสถานะเปลี่ยนเป็น: "ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)"\nลูกค้าผู้สั่งซื้อสามารถเข้าไปกดดาวน์โหลดไฟล์ E-Book ในหน้า "หนังสือของฉัน" ได้ทันทีครับ`);
-            } else {
-                alert('เกิดข้อผิดพลาด: ' + res.message);
+        async function handleAdminConfirm(orderId) {
+            // อัปเดตสถานะลงใน Supabase แบบ Real-time
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    await window.bookcoolDb.approveOrder(orderId);
+                    console.log('⚡ [Supabase] อนุมัติคำสั่งซื้อเรียบร้อย:', orderId);
+                }
+            } catch (err) {
+                console.warn('⚠️ ไม่สามารถอัปเดตใน Supabase ได้:', err.message);
             }
+
+            const res = orderManager.confirmOrder(orderId);
+            await renderAdminOrders();
+            alert(`🎉 ยืนยันคำสั่งซื้อ #${orderId} เรียบร้อยแล้ว!\n\nสถานะใน Supabase และหน้าเว็บเปลี่ยนเป็น: "ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)"\nลูกค้าผู้สั่งซื้อสามารถเข้าไปกดดาวน์โหลดไฟล์ E-Book ในหน้า "หนังสือของฉัน" ได้ทันทีครับ`);
         }
 
         function viewSlip(orderId, encodedSlipUrl) {

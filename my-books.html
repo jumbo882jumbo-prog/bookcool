@@ -16,6 +16,9 @@
     </style>
     <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
     <script src="auth.js"></script>
+    <!-- Supabase SDK & Integration -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
@@ -137,7 +140,7 @@
             URL.revokeObjectURL(url);
         }
 
-        function renderMyBooks() {
+        async function renderMyBooks() {
             const grid = document.getElementById('myBooksGrid');
             const banner = document.getElementById('newOrderBanner');
             const bannerText = document.getElementById('bannerOrderText');
@@ -165,14 +168,48 @@
                 return;
             }
 
-            // 2. ดึงเฉพาะคำสั่งซื้อที่เป็นของคนที่ล็อกอินอยู่เท่านั้น (เทียบจาก username หรือ email)
-            const allOrders = orderManager.getOrders();
+            // 2. ดึงเฉพาะคำสั่งซื้อที่เป็นของคนที่ล็อกอินอยู่
+            let allOrders = orderManager.getOrders();
+
+            // ดึงคำสั่งซื้อสดจาก Supabase (ถ้ามี)
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const supaOrders = await window.bookcoolDb.getOrders();
+                    if (Array.isArray(supaOrders) && supaOrders.length > 0) {
+                        const formatted = supaOrders.map(o => ({
+                            id: o.order_id,
+                            customerName: o.customer_name,
+                            customerEmail: o.customer_email,
+                            customerUsername: o.customer_username || '',
+                            total: parseFloat(o.total_amount) || 0,
+                            status: o.status,
+                            slipImage: o.slip_url,
+                            date: new Date(o.order_date || o.created_at).toLocaleString('th-TH'),
+                            items: (o.order_items || []).map(item => ({
+                                id: item.ebook_id,
+                                title: item.book_title,
+                                price: parseFloat(item.price),
+                                quantity: item.quantity
+                            }))
+                        }));
+
+                        const map = new Map();
+                        [...formatted, ...allOrders].forEach(item => {
+                            if (!map.has(item.id)) map.set(item.id, item);
+                        });
+                        allOrders = Array.from(map.values());
+                    }
+                }
+            } catch (err) {
+                console.log('ℹ️ [my-books] โหลดออเดอร์โหมด Local:', err.message);
+            }
+
             const orders = allOrders.filter(o => {
                 const matchUsername = o.customerUsername && currentUser.username &&
                     o.customerUsername.toLowerCase() === currentUser.username.toLowerCase();
                 const matchEmail = o.customerEmail && currentUser.email &&
                     o.customerEmail.toLowerCase() === currentUser.email.toLowerCase();
-                return matchUsername || matchEmail;
+                return matchUsername || matchEmail || currentUser.role === 'admin';
             });
 
             const urlParams = new URLSearchParams(window.location.search);
