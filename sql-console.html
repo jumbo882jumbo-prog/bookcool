@@ -667,7 +667,7 @@
                                 total: parseFloat(o.total_amount) || 0.00,
                                 total_amount: parseFloat(o.total_amount) || 0.00,
                                 status: String(o.status || 'pending'),
-                                order_date: String(o.order_date || '2026-10-01 12:00')
+                                order_date: String(o.order_date || o.created_at || '2026-10-01 12:00')
                             }));
                         }
 
@@ -682,11 +682,33 @@
                             }));
                         }
 
+                        // ซิงก์ Local Orders / Items ที่ยังไม่มีใน Supabase เข้ามาป้องกันข้อมูลตกหล่น
+                        const orderIdSet = new Set(sqlOrders.map(o => o.order_id));
+                        local.sqlOrders.forEach(lo => {
+                            if (!orderIdSet.has(lo.order_id)) {
+                                sqlOrders.push(lo);
+                                orderIdSet.add(lo.order_id);
+                            }
+                        });
+                        const itemIdSet = new Set(sqlOrderItems.map(it => `${it.order_id}_${it.ebook_id}`));
+                        local.sqlOrderItems.forEach(li => {
+                            if (!itemIdSet.has(`${li.order_id}_${li.ebook_id}`)) {
+                                sqlOrderItems.push(li);
+                                itemIdSet.add(`${li.order_id}_${li.ebook_id}`);
+                            }
+                        });
+
+                        const catCountMap = {};
+                        sqlBooks.forEach(b => {
+                            const c = b.category_name || 'ทั่วไป';
+                            catCountMap[c] = (catCountMap[c] || 0) + 1;
+                        });
+
                         if (supaCats && supaCats.length > 0) {
                             sqlCategories = supaCats.map(c => ({
                                 category_id: Number(c.category_id),
                                 category_name: String(c.category_name),
-                                book_count: 1
+                                book_count: catCountMap[String(c.category_name)] || 1
                             }));
                         }
 
@@ -1058,6 +1080,44 @@ ORDER BY total_spent DESC;`
                     executeSQL();
                 }
             }).catch(e => console.warn("Supabase background sync note:", e));
+
+            // 5. ติดตั้งระบบ Supabase Realtime เมื่อข้อมูลในตารางเปลี่ยนแปลง ให้รีเฟรชฐานข้อมูลทันที
+            if (window.bookcoolDb && typeof window.bookcoolDb.subscribeToTable === 'function') {
+                window.bookcoolDb.subscribeToTable('orders', (payload) => {
+                    console.log('⚡ [SQL Console] Realtime event on orders:', payload);
+                    refreshDatabase(false).then(() => {
+                        const ed = document.getElementById('sqlInput');
+                        if (ed && ed.value && ed.value.includes('orders')) {
+                            executeSQL();
+                        }
+                    });
+                });
+                window.bookcoolDb.subscribeToTable('order_items', (payload) => {
+                    console.log('⚡ [SQL Console] Realtime event on order_items:', payload);
+                    refreshDatabase(false).then(() => {
+                        const ed = document.getElementById('sqlInput');
+                        if (ed && ed.value && (ed.value.includes('order_items') || ed.value.includes('orders'))) {
+                            executeSQL();
+                        }
+                    });
+                });
+                window.bookcoolDb.subscribeToTable('ebooks', (payload) => {
+                    console.log('⚡ [SQL Console] Realtime event on ebooks:', payload);
+                    refreshDatabase(false).then(() => {
+                        const ed = document.getElementById('sqlInput');
+                        if (ed && ed.value && ed.value.includes('ebooks')) {
+                            executeSQL();
+                        }
+                    });
+                });
+            }
+
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'orders_list' || e.key === 'ebooks_store') {
+                    refreshDatabase(false);
+                }
+            });
+            window.addEventListener('ordersUpdated', () => refreshDatabase(false));
         }
 
         if (document.readyState === 'loading') {

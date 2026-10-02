@@ -21,6 +21,9 @@
     <script>
         auth.protectAdminPage();
     </script>
+    <!-- โหลด Supabase JS Client จาก CDN สำหรับ Realtime & Database -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col justify-between">
@@ -76,7 +79,7 @@
                     <span class="text-xs font-semibold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md">
                         Business Intelligence & SQL Analytics
                     </span>
-                    <span class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md shadow-2xs">
+                    <span id="liveRealtimeBadge" class="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-md shadow-2xs">
                         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                         ⚡ เรียลไทม์ (Live Real-Time Data)
                     </span>
@@ -449,12 +452,15 @@
     <script>
         let salesChartInstance = null;
         let categoryChartInstance = null;
+        let currentLiveOrders = [];
+        let isUpdatingReports = false;
 
         // เริ่มต้นสร้างกราฟและระบบเรียลไทม์เมื่อหน้าเว็บพร้อม
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             initSalesTimeChart();
             initCategoryChart();
-            updateLiveReports();
+            await updateLiveReports();
+            setupRealtimeSubscriptions();
         });
 
         // 1. กราฟยอดขายตามช่วงเวลา (Bar Chart)
@@ -548,297 +554,451 @@
             });
         }
 
-        // ฟังก์ชันหัวใจหลัก: คำนวณข้อมูลสถิติ 4 มิติจากคำสั่งซื้อจริงแบบเรียลไทม์
-        function updateLiveReports() {
-            const orders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+        // ฟังก์ชันหัวใจหลัก: คำนวณข้อมูลสถิติ 4 มิติจากคำสั่งซื้อจริงแบบเรียลไทม์ (Supabase + Local Sync)
+        async function updateLiveReports() {
+            if (isUpdatingReports) return;
+            isUpdatingReports = true;
 
-            // 1. คำนวณ KPI ภาพรวม
-            const totalOrdersCount = orders.length;
-            const approvedOrders = orders.filter(o => o.status === 'approved');
-            const pendingOrders = orders.filter(o => o.status === 'pending');
-            
-            const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-            const approvedRevenue = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-            const aov = totalOrdersCount > 0 ? (totalRevenue / totalOrdersCount) : 0;
-
-            const customerMap = {};
-            orders.forEach(o => {
-                const key = (o.customerEmail || o.customerUsername || o.customerName || 'guest').toLowerCase();
-                if (!customerMap[key]) {
-                    customerMap[key] = {
-                        name: o.customerName || 'ลูกค้าทั่วไป',
-                        email: o.customerEmail || '-',
-                        orders: 0,
-                        approved: 0,
-                        pending: 0,
-                        totalSpent: 0,
-                        lastDate: o.date || '-'
-                    };
-                }
-                customerMap[key].orders += 1;
-                if (o.status === 'approved') customerMap[key].approved += 1;
-                else customerMap[key].pending += 1;
-                customerMap[key].totalSpent += (parseFloat(o.total) || 0);
-                if (o.date) customerMap[key].lastDate = o.date;
-            });
-
-            const uniqueCustomers = Object.keys(customerMap).length;
-            const repeatCustomers = Object.values(customerMap).filter(c => c.orders > 1).length;
-
-            // อัปเดตการ์ด KPI
-            const elRev = document.getElementById('kpiRevenue');
-            if (elRev) elRev.innerText = `฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-            const elRevSub = document.getElementById('kpiRevenueSub');
-            if (elRevSub) elRevSub.innerText = `จากคำสั่งซื้อจริง (อนุมัติแล้ว ฿${approvedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })})`;
-
-            const elOrders = document.getElementById('kpiOrders');
-            if (elOrders) elOrders.innerText = `${totalOrdersCount} รายการ`;
-            const elOrderStatus = document.getElementById('kpiOrdersStatus');
-            if (elOrderStatus) elOrderStatus.innerHTML = `<span>✓ ชำระแล้ว ${approvedOrders.length}</span> <span class="text-amber-500">• รอตรวจสอบ ${pendingOrders.length}</span>`;
-
-            const elAOV = document.getElementById('kpiAOV');
-            if (elAOV) elAOV.innerText = `฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-            const elCust = document.getElementById('kpiCustomers');
-            if (elCust) elCust.innerText = `${uniqueCustomers} บัญชี`;
-            const elCustSub = document.getElementById('kpiCustomersSub');
-            if (elCustSub) elCustSub.innerHTML = `<span>⭐ ซื้อซ้ำ ${repeatCustomers} บัญชี (${uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0}%)</span>`;
-
-            // 2. รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales by Time Period)
-            const dateMap = {};
-            orders.forEach(o => {
-                const d = (o.date || '2026-10-01').substring(0, 10);
-                if (!dateMap[d]) {
-                    dateMap[d] = { date: d, orders: 0, qty: 0, total: 0 };
-                }
-                dateMap[d].orders += 1;
-                dateMap[d].total += (parseFloat(o.total) || 0);
-                (o.items || []).forEach(it => {
-                    dateMap[d].qty += (parseInt(it.quantity) || 1);
-                });
-            });
-
-            const sortedDates = Object.keys(dateMap).sort().reverse();
-            const dateTableBody = document.getElementById('tableSalesByDate');
-            if (dateTableBody) {
-                if (sortedDates.length === 0) {
-                    dateTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลคำสั่งซื้อในระบบ</td></tr>`;
-                } else {
-                    let totalQtyAll = 0;
-                    dateTableBody.innerHTML = sortedDates.map(d => {
-                        const item = dateMap[d];
-                        totalQtyAll += item.qty;
-                        const dayAov = item.orders > 0 ? (item.total / item.orders) : 0;
-                        return `
-                        <tr class="hover:bg-blue-50/40 transition">
-                            <td class="p-3.5 font-medium text-gray-900">${item.date}</td>
-                            <td class="p-3.5 text-center font-semibold">${item.orders} คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center">${item.qty} เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600">฿${item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5 text-right text-gray-600">฿${dayAov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5 text-center">
-                                <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">เรียลไทม์</span>
-                            </td>
-                        </tr>`;
-                    }).join('');
-
-                    const foot = document.getElementById('footSalesByDate');
-                    if (foot) {
-                        foot.innerHTML = `
-                        <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
-                            <td class="p-3.5">รวมผลประกอบการสะสม</td>
-                            <td class="p-3.5 text-center text-blue-600">${totalOrdersCount} คำสั่งซื้อ</td>
-                            <td class="p-3.5 text-center text-blue-600">${totalQtyAll} เล่ม</td>
-                            <td class="p-3.5 text-right text-blue-700 font-bold">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5 text-right text-blue-700">฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5 text-center text-emerald-600">100% เรียลไทม์</td>
-                        </tr>`;
+            try {
+                // 1. ดึงข้อมูลหนังสือ (E-Books) จาก Supabase หรือ Local เพื่อสร้าง Map สำหรับชื่อหมวดหมู่, ผู้แต่ง, รูปปก
+                let books = [];
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    try {
+                        books = await window.bookcoolDb.getBooks();
+                    } catch (e) {
+                        console.warn("ℹ️ [Reports] โหลดหนังสือจาก Supabase:", e.message);
                     }
                 }
-            }
+                if (!books || books.length === 0) {
+                    try {
+                        books = JSON.parse(localStorage.getItem('ebooks_store') || '[]');
+                    } catch (e) {}
+                }
 
-            // อัปเดตกราฟแท่งยอดขายตามวันที่
-            const chartDates = Object.keys(dateMap).sort();
-            const chartSales = chartDates.map(d => dateMap[d].total);
-            if (salesChartInstance) {
-                salesChartInstance.data.labels = chartDates.length ? chartDates : ['ไม่มีข้อมูล'];
-                salesChartInstance.data.datasets[0].data = chartSales.length ? chartSales : [0];
-                salesChartInstance.update('none');
-            }
+                const ebookMap = {};
+                const catBookCount = {};
+                (books || []).forEach(b => {
+                    const eid = Number(b.id || b.ebook_id);
+                    const catName = b.category_name || (b.categories && b.categories.category_name) || b.category || 'ทั่วไป';
+                    const entry = {
+                        id: eid,
+                        title: b.title || 'ไม่ระบุชื่อ',
+                        author: b.author_name || b.author || 'นักเขียนคุณภาพ',
+                        category: catName,
+                        cover: b.cover_image || b.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
+                        price: parseFloat(b.price) || 0
+                    };
+                    if (eid) ebookMap[eid] = entry;
+                    if (b.title) ebookMap[b.title.trim()] = entry;
+                    catBookCount[catName] = (catBookCount[catName] || 0) + 1;
+                });
 
-            // 3. รายงานที่ 2: E-Book ขายดี (Top Selling Books)
-            const bookSalesMap = {};
-            orders.forEach(o => {
-                (o.items || []).forEach(it => {
-                    const title = it.title || 'ไม่ระบุชื่อ';
-                    if (!bookSalesMap[title]) {
-                        bookSalesMap[title] = {
-                            title: title,
-                            cover: it.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
-                            author: it.author || 'ไม่ระบุผู้แต่ง',
-                            category: it.category || 'ทั่วไป',
-                            price: parseFloat(it.price) || 0,
-                            qty: 0,
-                            revenue: 0
+                // 2. ดึงข้อมูลคำสั่งซื้อสดจาก Supabase (Remote Orders)
+                let remoteOrders = [];
+                let isSupabaseConnected = false;
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    try {
+                        const supaOrders = await window.bookcoolDb.getOrders();
+                        if (Array.isArray(supaOrders) && supaOrders.length > 0) {
+                            remoteOrders = supaOrders.map(o => {
+                                const rawD = o.order_date || o.created_at || '2026-10-01';
+                                return {
+                                    id: o.order_id,
+                                    customerName: o.customer_name || 'ลูกค้าทั่วไป',
+                                    customerEmail: o.customer_email || 'user@bookcool.com',
+                                    customerUsername: o.customer_username || '',
+                                    total: parseFloat(o.total_amount) || 0,
+                                    status: o.status || 'pending',
+                                    slipImage: o.slip_url,
+                                    order_date: rawD,
+                                    date: String(rawD).replace('T', ' ').substring(0, 16),
+                                    rawDate: rawD,
+                                    items: (o.order_items || []).map(item => {
+                                        const bInfo = ebookMap[Number(item.ebook_id)] || ebookMap[(item.book_title || '').trim()] || {};
+                                        return {
+                                            id: item.ebook_id,
+                                            title: item.book_title || bInfo.title || 'ไม่ระบุชื่อ',
+                                            author: bInfo.author || 'นักเขียนคุณภาพ',
+                                            category: bInfo.category || 'ทั่วไป',
+                                            cover: bInfo.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
+                                            price: parseFloat(item.price) || bInfo.price || 0,
+                                            quantity: parseInt(item.quantity, 10) || 1
+                                        };
+                                    })
+                                };
+                            });
+                            isSupabaseConnected = true;
+                        }
+                    } catch (supaErr) {
+                        console.warn("ℹ️ [Reports] โหลดออเดอร์โหมด Local:", supaErr.message);
+                    }
+                }
+
+                // 3. ดึงคำสั่งซื้อจาก LocalStorage และ Merge ร่วมกันอย่างแม่นยำ
+                let localOrders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+                const orderMap = new Map();
+                remoteOrders.forEach(o => {
+                    orderMap.set(o.id, o);
+                });
+                localOrders.forEach(o => {
+                    if (!orderMap.has(o.id)) {
+                        (o.items || []).forEach(it => {
+                            const bInfo = ebookMap[Number(it.id || it.ebook_id)] || ebookMap[(it.title || '').trim()] || {};
+                            if (!it.category || it.category === 'ทั่วไป') it.category = bInfo.category || it.category || 'ทั่วไป';
+                            if (!it.cover) it.cover = bInfo.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120';
+                            if (!it.author) it.author = bInfo.author || 'นักเขียนคุณภาพ';
+                        });
+                        orderMap.set(o.id, o);
+                    } else {
+                        const existing = orderMap.get(o.id);
+                        if (String(o.status).toLowerCase() === 'pending') {
+                            existing.status = 'pending';
+                        }
+                        if (o.slipImage && !existing.slipImage) {
+                            existing.slipImage = o.slipImage;
+                        }
+                        if ((!existing.items || existing.items.length === 0) && (o.items && o.items.length > 0)) {
+                            existing.items = o.items;
+                        }
+                    }
+                });
+
+                let orders = Array.from(orderMap.values());
+                currentLiveOrders = orders;
+
+                // อัปเดตข้อความ Badge แสดงสถานะ Realtime บนหัวข้อ
+                const realtimeBadge = document.getElementById('liveRealtimeBadge');
+                if (realtimeBadge) {
+                    if (isSupabaseConnected) {
+                        realtimeBadge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span>⚡ เชื่อมต่อ Supabase Realtime สด (${orders.length} คำสั่งซื้อ)</span>
+                        `;
+                    } else {
+                        realtimeBadge.innerHTML = `
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                            <span>⚡ เรียลไทม์ (${orders.length} คำสั่งซื้อ)</span>
+                        `;
+                    }
+                }
+
+                // 4. คำนวณ KPI ภาพรวม
+                const totalOrdersCount = orders.length;
+                const approvedOrders = orders.filter(o => String(o.status).toLowerCase() === 'approved');
+                const pendingOrders = orders.filter(o => !o.status || String(o.status).toLowerCase() === 'pending');
+                
+                const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+                const approvedRevenue = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+                const aov = totalOrdersCount > 0 ? (totalRevenue / totalOrdersCount) : 0;
+
+                const customerMap = {};
+                orders.forEach(o => {
+                    const key = (o.customerEmail || o.customerUsername || o.customerName || 'guest').toLowerCase();
+                    if (!customerMap[key]) {
+                        customerMap[key] = {
+                            name: o.customerName || 'ลูกค้าทั่วไป',
+                            email: o.customerEmail || '-',
+                            orders: 0,
+                            approved: 0,
+                            pending: 0,
+                            totalSpent: 0,
+                            lastDate: o.date || '-'
                         };
                     }
-                    const q = parseInt(it.quantity) || 1;
-                    bookSalesMap[title].qty += q;
-                    bookSalesMap[title].revenue += ((parseFloat(it.price) || 0) * q);
+                    customerMap[key].orders += 1;
+                    if (String(o.status).toLowerCase() === 'approved') customerMap[key].approved += 1;
+                    else customerMap[key].pending += 1;
+                    customerMap[key].totalSpent += (parseFloat(o.total) || 0);
+                    if (o.date) customerMap[key].lastDate = o.date;
                 });
-            });
 
-            const sortedBooks = Object.values(bookSalesMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue);
-            const topBooksBody = document.getElementById('tableTopBooks');
-            if (topBooksBody) {
-                if (sortedBooks.length === 0) {
-                    topBooksBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการซื้อ E-Book</td></tr>`;
-                } else {
-                    const rankBadges = ['🥇 1', '🥈 2', '🥉 3'];
-                    topBooksBody.innerHTML = sortedBooks.slice(0, 10).map((b, idx) => {
-                        const rankText = idx < 3 ? rankBadges[idx] : String(idx + 1);
-                        const percent = totalRevenue > 0 ? ((b.revenue / totalRevenue) * 100).toFixed(1) : 0;
-                        return `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5 text-center">
-                                <span class="w-8 h-8 rounded-full ${idx === 0 ? 'bg-amber-100 text-amber-700 font-bold' : idx === 1 ? 'bg-slate-200 text-slate-700 font-bold' : idx === 2 ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-gray-100 text-gray-600'} inline-flex items-center justify-center text-xs shadow-2xs">
-                                    ${rankText}
-                                </span>
-                            </td>
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-3">
-                                    <img src="${b.cover}" alt="${b.title}" class="w-10 h-14 object-cover rounded shadow-2xs" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120'">
-                                    <div>
-                                        <div class="font-bold text-gray-900">${b.title}</div>
-                                        <div class="text-xs text-gray-500">${b.author}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5">
-                                <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
-                                    ${b.category}
-                                </span>
-                            </td>
-                            <td class="p-3.5 text-right font-medium text-gray-700">฿${b.price.toFixed(2)}</td>
-                            <td class="p-3.5 text-center font-bold text-amber-600 text-base">${b.qty} เล่ม</td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5">
-                                <div class="w-full bg-gray-200 rounded-full h-2.5">
-                                    <div class="bg-amber-500 h-2.5 rounded-full" style="width: ${Math.min(percent, 100)}%"></div>
-                                </div>
-                                <span class="text-[11px] text-gray-500 mt-1 block">${percent}% ของยอดรวม</span>
-                            </td>
-                        </tr>`;
-                    }).join('');
-                }
-            }
+                const uniqueCustomers = Object.keys(customerMap).length;
+                const repeatCustomers = Object.values(customerMap).filter(c => c.orders > 1).length;
 
-            // 4. รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category)
-            const catMap = {};
-            orders.forEach(o => {
-                (o.items || []).forEach(it => {
-                    const cat = it.category || 'ทั่วไป';
-                    if (!catMap[cat]) {
-                        catMap[cat] = { category: cat, qty: 0, revenue: 0 };
+                // อัปเดตการ์ด KPI
+                const elRev = document.getElementById('kpiRevenue');
+                if (elRev) elRev.innerText = `฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const elRevSub = document.getElementById('kpiRevenueSub');
+                if (elRevSub) elRevSub.innerText = `จากคำสั่งซื้อจริง (อนุมัติแล้ว ฿${approvedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })})`;
+
+                const elOrders = document.getElementById('kpiOrders');
+                if (elOrders) elOrders.innerText = `${totalOrdersCount} รายการ`;
+                const elOrderStatus = document.getElementById('kpiOrdersStatus');
+                if (elOrderStatus) elOrderStatus.innerHTML = `<span>✓ ชำระแล้ว ${approvedOrders.length}</span> <span class="text-amber-500">• รอตรวจสอบ ${pendingOrders.length}</span>`;
+
+                const elAOV = document.getElementById('kpiAOV');
+                if (elAOV) elAOV.innerText = `฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+                const elCust = document.getElementById('kpiCustomers');
+                if (elCust) elCust.innerText = `${uniqueCustomers} บัญชี`;
+                const elCustSub = document.getElementById('kpiCustomersSub');
+                if (elCustSub) elCustSub.innerHTML = `<span>⭐ ซื้อซ้ำ ${repeatCustomers} บัญชี (${uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0}%)</span>`;
+
+                // 5. รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales by Time Period)
+                const dateMap = {};
+                orders.forEach(o => {
+                    const rawStr = String(o.order_date || o.date || '2026-10-01');
+                    const d = rawStr.substring(0, 10);
+                    if (!dateMap[d]) {
+                        dateMap[d] = { date: d, orders: 0, qty: 0, total: 0 };
                     }
-                    const q = parseInt(it.quantity) || 1;
-                    catMap[cat].qty += q;
-                    catMap[cat].revenue += ((parseFloat(it.price) || 0) * q);
+                    dateMap[d].orders += 1;
+                    dateMap[d].total += (parseFloat(o.total) || 0);
+                    (o.items || []).forEach(it => {
+                        dateMap[d].qty += (parseInt(it.quantity) || 1);
+                    });
                 });
-            });
 
-            const sortedCats = Object.values(catMap).sort((a, b) => b.revenue - a.revenue);
-            const catLabels = sortedCats.map(c => c.category);
-            const catValues = sortedCats.map(c => c.revenue);
-            const catPalette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'];
+                const sortedDates = Object.keys(dateMap).sort().reverse();
+                const dateTableBody = document.getElementById('tableSalesByDate');
+                if (dateTableBody) {
+                    if (sortedDates.length === 0) {
+                        dateTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลคำสั่งซื้อในระบบ</td></tr>`;
+                    } else {
+                        let totalQtyAll = 0;
+                        dateTableBody.innerHTML = sortedDates.map(d => {
+                            const item = dateMap[d];
+                            totalQtyAll += item.qty;
+                            const dayAov = item.orders > 0 ? (item.total / item.orders) : 0;
+                            return `
+                            <tr class="hover:bg-blue-50/40 transition">
+                                <td class="p-3.5 font-medium text-gray-900">${item.date}</td>
+                                <td class="p-3.5 text-center font-semibold">${item.orders} คำสั่งซื้อ</td>
+                                <td class="p-3.5 text-center">${item.qty} เล่ม</td>
+                                <td class="p-3.5 text-right font-bold text-blue-600">฿${item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5 text-right text-gray-600">฿${dayAov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5 text-center">
+                                    <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">เรียลไทม์</span>
+                                </td>
+                            </tr>`;
+                        }).join('');
 
-            if (categoryChartInstance) {
-                categoryChartInstance.data.labels = catLabels.length ? catLabels : ['ไม่มีข้อมูล'];
-                categoryChartInstance.data.datasets[0].data = catValues.length ? catValues : [1];
-                categoryChartInstance.data.datasets[0].backgroundColor = catPalette.slice(0, Math.max(catLabels.length, 1));
-                categoryChartInstance.update('none');
-            }
-
-            const catTableBody = document.getElementById('tableCategories');
-            if (catTableBody) {
-                if (sortedCats.length === 0) {
-                    catTableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลยอดขายแยกหมวดหมู่</td></tr>`;
-                } else {
-                    catTableBody.innerHTML = sortedCats.map((c, i) => {
-                        const color = catPalette[i % catPalette.length];
-                        const pct = totalRevenue > 0 ? ((c.revenue / totalRevenue) * 100).toFixed(1) : 0;
-                        return `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
-                                ${c.category}
-                            </td>
-                            <td class="p-3 text-center text-gray-500">-</td>
-                            <td class="p-3 text-center font-bold text-gray-800">${c.qty} เล่ม</td>
-                            <td class="p-3 text-right font-bold text-blue-600">฿${c.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3 text-right font-semibold text-blue-600">${pct}%</td>
-                        </tr>`;
-                    }).join('');
-
-                    const catFoot = document.getElementById('footCategories');
-                    if (catFoot) {
-                        const totalCatQty = sortedCats.reduce((s, c) => s + c.qty, 0);
-                        catFoot.innerHTML = `
-                        <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
-                            <td class="p-3">รวม ${sortedCats.length} หมวดหมู่</td>
-                            <td class="p-3 text-center">-</td>
-                            <td class="p-3 text-center text-blue-600">${totalCatQty} เล่ม</td>
-                            <td class="p-3 text-right text-blue-700">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3 text-right text-emerald-600">100.0%</td>
-                        </tr>`;
-                    }
-                }
-            }
-
-            // 5. รายงานที่ 4: ลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)
-            const sortedCustomers = Object.values(customerMap).sort((a, b) => b.totalSpent - a.totalSpent);
-            const custTableBody = document.getElementById('tableCustomers');
-            if (custTableBody) {
-                if (sortedCustomers.length === 0) {
-                    custTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลลูกค้าในระบบ</td></tr>`;
-                } else {
-                    custTableBody.innerHTML = sortedCustomers.map(cust => {
-                        const initials = (cust.name || 'US').substring(0, 2);
-                        let tierBadge = `<span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">Member</span>`;
-                        if (cust.totalSpent >= 1500) {
-                            tierBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-200">👑 VIP Gold</span>`;
-                        } else if (cust.totalSpent >= 800) {
-                            tierBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-200">🥈 VIP Silver</span>`;
+                        const foot = document.getElementById('footSalesByDate');
+                        if (foot) {
+                            foot.innerHTML = `
+                            <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
+                                <td class="p-3.5">รวมผลประกอบการสะสม</td>
+                                <td class="p-3.5 text-center text-blue-600">${totalOrdersCount} คำสั่งซื้อ</td>
+                                <td class="p-3.5 text-center text-blue-600">${totalQtyAll} เล่ม</td>
+                                <td class="p-3.5 text-right text-blue-700 font-bold">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5 text-right text-blue-700">฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5 text-center text-emerald-600">100% เรียลไทม์</td>
+                            </tr>`;
                         }
-
-                        return `
-                        <tr class="hover:bg-slate-50 transition">
-                            <td class="p-3.5">
-                                <div class="flex items-center gap-2.5">
-                                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
-                                        ${initials}
-                                    </div>
-                                    <div>
-                                        <div class="font-bold text-gray-900">${cust.name}</div>
-                                        <div class="text-xs text-gray-400">${cust.email}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td class="p-3.5 text-center">${tierBadge}</td>
-                            <td class="p-3.5 text-center font-bold text-gray-900">${cust.orders} ครั้ง</td>
-                            <td class="p-3.5 text-center space-x-1">
-                                <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ ${cust.approved}</span>
-                                ${cust.pending > 0 ? `<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป ${cust.pending}</span>` : ''}
-                            </td>
-                            <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${cust.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                            <td class="p-3.5 text-center text-gray-500">${cust.lastDate}</td>
-                        </tr>`;
-                    }).join('');
+                    }
                 }
+
+                // อัปเดตกราฟแท่งยอดขายตามวันที่
+                const chartDates = Object.keys(dateMap).sort();
+                const chartSales = chartDates.map(d => dateMap[d].total);
+                if (salesChartInstance) {
+                    salesChartInstance.data.labels = chartDates.length ? chartDates : ['ไม่มีข้อมูล'];
+                    salesChartInstance.data.datasets[0].data = chartSales.length ? chartSales : [0];
+                    salesChartInstance.update('none');
+                }
+
+                // 6. รายงานที่ 2: E-Book ขายดี (Top Selling Books)
+                const bookSalesMap = {};
+                orders.forEach(o => {
+                    (o.items || []).forEach(it => {
+                        const title = it.title || 'ไม่ระบุชื่อ';
+                        if (!bookSalesMap[title]) {
+                            bookSalesMap[title] = {
+                                title: title,
+                                cover: it.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
+                                author: it.author || 'ไม่ระบุผู้แต่ง',
+                                category: it.category || 'ทั่วไป',
+                                price: parseFloat(it.price) || 0,
+                                qty: 0,
+                                revenue: 0
+                            };
+                        }
+                        const q = parseInt(it.quantity) || 1;
+                        bookSalesMap[title].qty += q;
+                        bookSalesMap[title].revenue += ((parseFloat(it.price) || 0) * q);
+                    });
+                });
+
+                const sortedBooks = Object.values(bookSalesMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue);
+                const topBooksBody = document.getElementById('tableTopBooks');
+                if (topBooksBody) {
+                    if (sortedBooks.length === 0) {
+                        topBooksBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการซื้อ E-Book</td></tr>`;
+                    } else {
+                        const rankBadges = ['🥇 1', '🥈 2', '🥉 3'];
+                        topBooksBody.innerHTML = sortedBooks.slice(0, 10).map((b, idx) => {
+                            const rankText = idx < 3 ? rankBadges[idx] : String(idx + 1);
+                            const percent = totalRevenue > 0 ? ((b.revenue / totalRevenue) * 100).toFixed(1) : 0;
+                            return `
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3.5 text-center">
+                                    <span class="w-8 h-8 rounded-full ${idx === 0 ? 'bg-amber-100 text-amber-700 font-bold' : idx === 1 ? 'bg-slate-200 text-slate-700 font-bold' : idx === 2 ? 'bg-amber-50 text-amber-800 font-bold' : 'bg-gray-100 text-gray-600'} inline-flex items-center justify-center text-xs shadow-2xs">
+                                        ${rankText}
+                                    </span>
+                                </td>
+                                <td class="p-3.5">
+                                    <div class="flex items-center gap-3">
+                                        <img src="${b.cover}" alt="${b.title}" class="w-10 h-14 object-cover rounded shadow-2xs" onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120'">
+                                        <div>
+                                            <div class="font-bold text-gray-900">${b.title}</div>
+                                            <div class="text-xs text-gray-500">${b.author}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3.5">
+                                    <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-medium">
+                                        ${b.category}
+                                    </span>
+                                </td>
+                                <td class="p-3.5 text-right font-medium text-gray-700">฿${b.price.toFixed(2)}</td>
+                                <td class="p-3.5 text-center font-bold text-amber-600 text-base">${b.qty} เล่ม</td>
+                                <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${b.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5">
+                                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                        <div class="bg-amber-500 h-2.5 rounded-full" style="width: ${Math.min(percent, 100)}%"></div>
+                                    </div>
+                                    <span class="text-[11px] text-gray-500 mt-1 block">${percent}% ของยอดรวม</span>
+                                </td>
+                            </tr>`;
+                        }).join('');
+                    }
+                }
+
+                // 7. รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category)
+                const catMap = {};
+                orders.forEach(o => {
+                    (o.items || []).forEach(it => {
+                        const cat = it.category || 'ทั่วไป';
+                        if (!catMap[cat]) {
+                            catMap[cat] = { category: cat, qty: 0, revenue: 0, bookCount: catBookCount[cat] || 0 };
+                        }
+                        const q = parseInt(it.quantity) || 1;
+                        catMap[cat].qty += q;
+                        catMap[cat].revenue += ((parseFloat(it.price) || 0) * q);
+                    });
+                });
+
+                const sortedCats = Object.values(catMap).sort((a, b) => b.revenue - a.revenue);
+                const catLabels = sortedCats.map(c => c.category);
+                const catValues = sortedCats.map(c => c.revenue);
+                const catPalette = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#64748b'];
+
+                if (categoryChartInstance) {
+                    categoryChartInstance.data.labels = catLabels.length ? catLabels : ['ไม่มีข้อมูล'];
+                    categoryChartInstance.data.datasets[0].data = catValues.length ? catValues : [1];
+                    categoryChartInstance.data.datasets[0].backgroundColor = catPalette.slice(0, Math.max(catLabels.length, 1));
+                    categoryChartInstance.update('none');
+                }
+
+                const catTableBody = document.getElementById('tableCategories');
+                if (catTableBody) {
+                    if (sortedCats.length === 0) {
+                        catTableBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลยอดขายแยกหมวดหมู่</td></tr>`;
+                    } else {
+                        catTableBody.innerHTML = sortedCats.map((c, i) => {
+                            const color = catPalette[i % catPalette.length];
+                            const pct = totalRevenue > 0 ? ((c.revenue / totalRevenue) * 100).toFixed(1) : 0;
+                            const storeBooksStr = c.bookCount > 0 ? `${c.bookCount} เรื่อง` : '-';
+                            return `
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 font-medium text-gray-900 flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full" style="background-color: ${color}"></span>
+                                    ${c.category}
+                                </td>
+                                <td class="p-3 text-center text-gray-600 font-medium">${storeBooksStr}</td>
+                                <td class="p-3 text-center font-bold text-gray-800">${c.qty} เล่ม</td>
+                                <td class="p-3 text-right font-bold text-blue-600">฿${c.revenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3 text-right font-semibold text-blue-600">${pct}%</td>
+                            </tr>`;
+                        }).join('');
+
+                        const catFoot = document.getElementById('footCategories');
+                        if (catFoot) {
+                            const totalCatQty = sortedCats.reduce((s, c) => s + c.qty, 0);
+                            const totalStoreBooks = Object.values(catBookCount).reduce((a, b) => a + b, 0);
+                            catFoot.innerHTML = `
+                            <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
+                                <td class="p-3">รวม ${sortedCats.length} หมวดหมู่</td>
+                                <td class="p-3 text-center text-gray-700">${totalStoreBooks > 0 ? totalStoreBooks + ' เรื่อง' : '-'}</td>
+                                <td class="p-3 text-center text-blue-600">${totalCatQty} เล่ม</td>
+                                <td class="p-3 text-right text-blue-700">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3 text-right text-emerald-600">100.0%</td>
+                            </tr>`;
+                        }
+                    }
+                }
+
+                // 8. รายงานที่ 4: ลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)
+                const sortedCustomers = Object.values(customerMap).sort((a, b) => b.totalSpent - a.totalSpent);
+                const custTableBody = document.getElementById('tableCustomers');
+                if (custTableBody) {
+                    if (sortedCustomers.length === 0) {
+                        custTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลลูกค้าในระบบ</td></tr>`;
+                    } else {
+                        custTableBody.innerHTML = sortedCustomers.map(cust => {
+                            const initials = (cust.name || 'US').substring(0, 2);
+                            let tierBadge = `<span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-full font-medium">Member</span>`;
+                            if (cust.totalSpent >= 1500) {
+                                tierBadge = `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-amber-200">👑 VIP Gold</span>`;
+                            } else if (cust.totalSpent >= 800) {
+                                tierBadge = `<span class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded-full font-semibold border border-indigo-200">🥈 VIP Silver</span>`;
+                            }
+
+                            return `
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3.5">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-700 font-bold flex items-center justify-center text-xs">
+                                            ${initials}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-gray-900">${cust.name}</div>
+                                            <div class="text-xs text-gray-400">${cust.email}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="p-3.5 text-center">${tierBadge}</td>
+                                <td class="p-3.5 text-center font-bold text-gray-900">${cust.orders} ครั้ง</td>
+                                <td class="p-3.5 text-center space-x-1">
+                                    <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ ${cust.approved}</span>
+                                    ${cust.pending > 0 ? `<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป ${cust.pending}</span>` : ''}
+                                </td>
+                                <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${cust.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                                <td class="p-3.5 text-center text-gray-500">${cust.lastDate}</td>
+                            </tr>`;
+                        }).join('');
+                    }
+                }
+            } catch (err) {
+                console.error("❌ Error updating live reports:", err);
+            } finally {
+                isUpdatingReports = false;
             }
         }
 
         // ระบบ Real-Time Event Listeners
+        let realtimeChannels = [];
+        function setupRealtimeSubscriptions() {
+            if (realtimeChannels.length > 0) return;
+            if (window.bookcoolDb && typeof window.bookcoolDb.subscribeToTable === 'function') {
+                const subOrders = window.bookcoolDb.subscribeToTable('orders', (payload) => {
+                    console.log('⚡ [Reports] Realtime update on orders:', payload);
+                    updateLiveReports();
+                });
+                const subItems = window.bookcoolDb.subscribeToTable('order_items', (payload) => {
+                    console.log('⚡ [Reports] Realtime update on order_items:', payload);
+                    updateLiveReports();
+                });
+                const subBooks = window.bookcoolDb.subscribeToTable('ebooks', (payload) => {
+                    console.log('⚡ [Reports] Realtime update on ebooks:', payload);
+                    updateLiveReports();
+                });
+                if (subOrders) realtimeChannels.push(subOrders);
+                if (subItems) realtimeChannels.push(subItems);
+                if (subBooks) realtimeChannels.push(subBooks);
+            }
+        }
+
         window.addEventListener('storage', (e) => {
             if (e.key === 'orders_list' || e.key === 'ebooks_store') {
                 updateLiveReports();
@@ -846,34 +1006,39 @@
         });
         window.addEventListener('ordersUpdated', updateLiveReports);
         window.addEventListener('pageshow', updateLiveReports);
-        // อัปเดตข้อมูลอัตโนมัติทุก 2.5 วินาที
-        setInterval(updateLiveReports, 2500);
+        // Polling สำรองทุก 4 วินาทีเพื่อความแม่นยำสูงสุด
+        setInterval(updateLiveReports, 4000);
 
         // ฟังก์ชันจำลองตัวกรองวันที่
         function filterData() {
             updateLiveReports();
         }
 
-        // ฟังก์ชันส่งออกรายงานเป็น CSV
+        // ฟังก์ชันส่งออกรายงานเป็น CSV พร้อม BOM รองรับภาษาไทยใน Excel
         function exportReport() {
-            const orders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+            const orders = (currentLiveOrders && currentLiveOrders.length > 0) 
+                ? currentLiveOrders 
+                : ((typeof orderManager !== 'undefined') ? orderManager.getOrders() : []);
+
             if (!orders || orders.length === 0) {
                 alert('ยังไม่มีข้อมูลคำสั่งซื้อสำหรับส่งออก');
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,Order ID,Customer Name,Email,Total (THB),Status,Date\n";
+            let csvContent = "\uFEFFOrder ID,Customer Name,Email,Total (THB),Status,Date\n";
             orders.forEach(o => {
                 csvContent += `"${o.id}","${o.customerName || ''}","${o.customerEmail || ''}","${o.total}","${o.status}","${o.date || ''}"\n`;
             });
 
-            const encodedUri = encodeURI(csvContent);
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
+            link.setAttribute("href", url);
             link.setAttribute("download", `EBook_Store_Sales_Report_${new Date().toISOString().slice(0, 10)}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            URL.revokeObjectURL(url);
         }
     </script>
 </body>
