@@ -146,12 +146,47 @@
         let checkoutCart = [];
         let checkoutTotal = 0;
 
-        function initCheckout() {
+        async function initCheckout() {
+            // 1. ตรวจสอบว่ามีการส่ง ?id= หรือ ?bookId= มาโดยตรงหรือไม่
+            const urlParams = new URLSearchParams(window.location.search);
+            const directBookId = urlParams.get('bookId') || urlParams.get('id');
+
+            if (directBookId) {
+                let foundBook = null;
+                // หาจาก ebooks_store ใน localStorage
+                try {
+                    const stored = JSON.parse(localStorage.getItem('ebooks_store') || '[]');
+                    foundBook = stored.find(b => String(b.id) === String(directBookId));
+                } catch(e) {}
+
+                // ถ้าไม่พบ ให้ลองหาจาก Supabase
+                if (!foundBook && window.bookcoolDb && window.bookcoolDb.client) {
+                    try {
+                        const supaBook = await window.bookcoolDb.getBookById(directBookId);
+                        if (supaBook) {
+                            foundBook = {
+                                id: supaBook.ebook_id,
+                                title: supaBook.title,
+                                author: supaBook.author_name,
+                                price: parseFloat(supaBook.price) || 0,
+                                cover: supaBook.cover_image,
+                                category: supaBook.category_name || 'ทั่วไป'
+                            };
+                        }
+                    } catch(e) {}
+                }
+
+                if (foundBook) {
+                    // ใส่ลงตะกร้าทันที
+                    cartManager.addToCart(foundBook);
+                }
+            }
+
             checkoutCart = cartManager.getCart();
 
             // หากไม่มีสินค้าในตะกร้า แต่ผู้ใช้กดเข้ามา ให้ใส่เล่มตัวอย่างหรือแจ้งเตือน
             if (!checkoutCart || checkoutCart.length === 0) {
-                // หากตะกร้าว่าง ให้ลองโหลดเล่มแรกเป็นค่าเริ่มต้นเพื่อความสะดวกในการทดสอบ
+                // หากตะกร้าว่าง ให้โหลดหนังสือเล่มแรกเป็นค่าเริ่มต้น
                 checkoutCart = [
                     {
                         id: "1",
@@ -191,17 +226,18 @@
             checkoutTotal = 0;
             container.innerHTML = checkoutCart.map(item => {
                 const qty = item.quantity || 1;
-                const sub = (parseFloat(item.price) || 0) * qty;
+                const priceNum = typeof item.price === 'string' ? (parseFloat(item.price.replace(/[^\d.-]/g, '')) || 0) : (parseFloat(item.price) || 0);
+                const sub = priceNum * qty;
                 checkoutTotal += sub;
 
                 return `
                 <div class="flex items-center justify-between py-2.5 text-sm">
                     <div class="flex items-center gap-3">
-                        <img src="${item.cover}" class="w-9 h-12 object-cover rounded shadow-2xs"
+                        <img src="${item.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100'}" class="w-9 h-12 object-cover rounded shadow-2xs"
                             onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=100'">
                         <div>
                             <span class="font-medium text-gray-800">${item.title}</span>
-                            <span class="text-xs text-gray-400 block">จำนวน ${qty} เล่ม</span>
+                            <span class="text-xs text-gray-400 block">${item.author ? 'ผู้แต่ง: ' + item.author + ' • ' : ''}จำนวน ${qty} เล่ม</span>
                         </div>
                     </div>
                     <span class="font-semibold text-gray-800">฿${sub.toFixed(2)}</span>
@@ -268,13 +304,23 @@
 
             async function finishOrder(slipDataUrl) {
                 try {
-                    // 1. สร้างคำสั่งซื้อใหม่และบันทึกลงในระบบ localStorage (orders_list)
-                    const newOrder = orderManager.createOrder(customerInfo, checkoutCart, checkoutTotal, slipDataUrl);
+                    // 1. คำนวณรหัสบิลใหม่อย่างปลอดภัยจาก Supabase
+                    let nextId = null;
+                    if (window.bookcoolDb && typeof window.bookcoolDb.getNextOrderId === 'function') {
+                        try {
+                            nextId = await window.bookcoolDb.getNextOrderId();
+                        } catch(e) {
+                            console.warn('Could not get next ID from Supabase:', e);
+                        }
+                    }
 
-                    // 1.1 บันทึกคำสั่งซื้อลง Supabase (ตาราง orders และ order_items) หากเชื่อมต่อไว้
+                    // 2. สร้างคำสั่งซื้อใหม่และบันทึกลงในระบบ localStorage (orders_list)
+                    const newOrder = orderManager.createOrder(customerInfo, checkoutCart, checkoutTotal, slipDataUrl, nextId);
+
+                    // 2.1 บันทึกคำสั่งซื้อลง Supabase (ตาราง orders และ order_items) หากเชื่อมต่อไว้
                     try {
                         if (window.bookcoolDb && window.bookcoolDb.client) {
-                            await window.bookcoolDb.createOrder({
+                            const supaRes = await window.bookcoolDb.createOrder({
                                 orderId: newOrder.id,
                                 userId: currentUser?.id || null,
                                 customerName: customerInfo.name,
@@ -284,19 +330,26 @@
                                 slipUrl: slipDataUrl || '',
                                 items: checkoutCart
                             });
-                            console.log('⚡ [bookcool] บันทึกคำสั่งซื้อลง Supabase (pending) สำเร็จ:', newOrder.id);
+                            console.log('⚡ [bookcool] บันทึกคำสั่งซื้อลง Supabase (pending) สำเร็จ:', supaRes?.order_id || newOrder.id);
                         }
                     } catch (supaErr) {
                         console.warn('⚠️ ไม่สามารถซิงก์ลง Supabase ได้ (ใช้ LocalStorage สำรอง):', supaErr.message);
                     }
 
-                    // 2. เคลียร์ตะกร้าสินค้า
+                    // 3. เตรียมข้อความสรุปหนังสือที่สั่งซื้อ
+                    const bookListText = (checkoutCart || []).map((b, i) => {
+                        const q = b.quantity || 1;
+                        const p = typeof b.price === 'string' ? (parseFloat(b.price.replace(/[^\d.-]/g, '')) || 0) : (parseFloat(b.price) || 0);
+                        return `   ${i + 1}. ${b.title} (${q} เล่ม) - ฿${(p * q).toFixed(2)}`;
+                    }).join('\n');
+
+                    // 4. เคลียร์ตะกร้าสินค้า
                     cartManager.clearCart();
 
-                    // 3. แจ้งเตือนลูกค้า
-                    alert(`🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\nรหัสคำสั่งซื้อ: #${newOrder.id}\nยอดชำระ: ฿${newOrder.total.toFixed(2)}\nสถานะ: ⏳ "รอการตรวจสอบจากผู้ดูแลระบบ"\n\nคำสั่งซื้อถูกส่งไปยังระบบหลังบ้าน (Admin) เรียบร้อยแล้ว เพื่อรอแอดมินกดยืนยันคำสั่งซื้อครับ`);
+                    // 5. แจ้งเตือนลูกค้าพร้อมแสดงหนังสือชัดเจน
+                    alert(`🎉 ส่งหลักฐานการชำระเงินเรียบร้อยแล้ว!\n\n📋 รหัสคำสั่งซื้อ: #${newOrder.id}\n\n📚 รายการหนังสือที่สั่งซื้อ:\n${bookListText}\n\n💰 ยอดชำระสุทธิ: ฿${newOrder.total.toFixed(2)}\n⏳ สถานะ: "รอการตรวจสอบจากผู้ดูแลระบบ (Pending)"\n\nคำสั่งซื้อถูกบันทึกส่งไปยังระบบหลังบ้าน (Admin) เรียบร้อยแล้ว เพื่อรอแอดมินกดยืนยันคำสั่งซื้อครับ`);
 
-                    // 4. ไปยังหน้าหนังสือของฉัน
+                    // 6. ไปยังหน้าหนังสือของฉัน
                     window.location.href = `my-books.html?newOrder=${encodeURIComponent(newOrder.id)}`;
                 } catch (err) {
                     console.error('Checkout error:', err);

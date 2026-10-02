@@ -209,9 +209,48 @@
             return true;
         },
 
+        // 3.4 คำนวณรหัสคำสั่งซื้อใหม่ (ป้องกันการชนกับบิลเดิมใน Supabase)
+        async getNextOrderId() {
+            let maxNum = 19; // ตั้งต้นขั้นต่ำ 19 ป้องกันชนกับ ORD-2026-001 ถึง 019
+            if (this.client) {
+                try {
+                    const { data } = await this.client.from('orders').select('order_id');
+                    if (data && Array.isArray(data)) {
+                        data.forEach(o => {
+                            const m = String(o.order_id).match(/ORD-\d+-(\d+)/);
+                            if (m) {
+                                const n = parseInt(m[1], 10);
+                                if (n > maxNum) maxNum = n;
+                            }
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Could not query max order_id from Supabase:', e);
+                }
+            }
+            // ตรวจสอบกับ localStorage ด้วย
+            try {
+                const stored = JSON.parse(localStorage.getItem('orders_list') || '[]');
+                stored.forEach(o => {
+                    const m = String(o.id).match(/ORD-\d+-(\d+)/);
+                    if (m) {
+                        const n = parseInt(m[1], 10);
+                        if (n > maxNum) maxNum = n;
+                    }
+                });
+            } catch (e) {}
+
+            return `ORD-2026-${String(maxNum + 1).padStart(3, '0')}`;
+        },
+
         // 4. สร้างคำสั่งซื้อใหม่ (บันทึกลง orders และ order_items)
         async createOrder({ orderId, userId, customerName, customerEmail, customerUsername, totalAmount, slipUrl = '', items = [] }) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+
+            let finalOrderId = orderId;
+            if (!finalOrderId) {
+                finalOrderId = await this.getNextOrderId();
+            }
 
             // หาหรือสร้าง profile UUID ให้สอดคล้องกับตาราง profiles/user_library
             let resolvedUserId = userId;
@@ -230,43 +269,94 @@
                 }
             }
 
-            // บันทึกลงตาราง orders
-            const { data: orderData, error: orderError } = await this.client
-                .from('orders')
-                .insert([{
-                    order_id: orderId,
-                    user_id: resolvedUserId || null,
-                    customer_name: customerName,
-                    customer_email: customerEmail,
-                    customer_username: customerUsername || 'user',
-                    total_amount: totalAmount,
-                    status: 'pending',
-                    slip_url: slipUrl,
-                    order_date: new Date().toISOString()
-                }])
-                .select()
-                .single();
+            const cleanTotal = parseFloat(String(totalAmount).replace(/[^\d.-]/g, '')) || 0;
 
-            if (orderError) throw orderError;
+            // บันทึกลงตาราง orders (พร้อม retry หากเกิดชน primary key)
+            let orderData = null;
+            let insertAttempts = 0;
+            while (insertAttempts < 3 && !orderData) {
+                insertAttempts++;
+                const { data, error: orderError } = await this.client
+                    .from('orders')
+                    .insert([{
+                        order_id: finalOrderId,
+                        user_id: resolvedUserId || null,
+                        customer_name: customerName || 'ลูกค้าทั่วไป',
+                        customer_email: customerEmail || 'customer@example.com',
+                        customer_username: customerUsername || 'user',
+                        total_amount: cleanTotal,
+                        status: 'pending',
+                        slip_url: slipUrl,
+                        order_date: new Date().toISOString()
+                    }])
+                    .select()
+                    .single();
 
-            // บันทึกรายการย่อยลงตาราง order_items
-            if (items && items.length > 0) {
-                const orderItems = items.map(item => ({
-                    order_id: orderId,
-                    ebook_id: item.id || item.ebook_id,
-                    book_title: item.title,
-                    price: item.price,
-                    quantity: item.quantity || 1
-                }));
-
-                const { error: itemsError } = await this.client
-                    .from('order_items')
-                    .insert(orderItems);
-
-                if (itemsError) throw itemsError;
+                if (orderError) {
+                    if (orderError.code === '23505') { // Duplicate key
+                        console.warn(`รหัสบิล ${finalOrderId} มีในระบบแล้ว กำลังสุ่มรหัสถัดไป...`);
+                        finalOrderId = await this.getNextOrderId();
+                        continue;
+                    }
+                    throw orderError;
+                }
+                orderData = data;
             }
 
-            return orderData;
+            if (!orderData) throw new Error('ไม่สามารถบันทึกคำสั่งซื้อลงฐานข้อมูลได้');
+
+            // บันทึกรายการย่อยลงตาราง order_items (คลีนราคาและรหัสหนังสือให้ถูกต้องเสมอ)
+            if (items && items.length > 0) {
+                const orderItems = items.map(item => {
+                    // ทำความสะอาดราคา ป้องกัน NaN จากสัญลักษณ์เงิน ฿
+                    let priceVal = 0;
+                    if (typeof item.price === 'string') {
+                        priceVal = parseFloat(item.price.replace(/[^\d.-]/g, '')) || 0;
+                    } else {
+                        priceVal = parseFloat(item.price) || 0;
+                    }
+
+                    // รหัสหนังสือ
+                    let rawEid = String(item.id || item.ebook_id || '1').replace(/[^\d]/g, '');
+                    let eidNum = parseInt(rawEid, 10);
+                    if (isNaN(eidNum) || eidNum <= 0) eidNum = 1;
+
+                    return {
+                        order_id: finalOrderId,
+                        ebook_id: eidNum,
+                        book_title: item.title || item.book_title || 'หนังสือสั่งซื้อ',
+                        price: priceVal,
+                        quantity: parseInt(item.quantity, 10) || 1
+                    };
+                });
+
+                try {
+                    const { error: itemsError } = await this.client
+                        .from('order_items')
+                        .insert(orderItems);
+
+                    if (itemsError) {
+                        console.warn('⚠️ บันทึก order_items ใน Supabase แจ้งเตือน:', itemsError.message);
+                    }
+                } catch (itErr) {
+                    console.warn('⚠️ เกิดข้อผิดพลาดใน order_items:', itErr.message);
+                }
+            }
+
+            return { ...orderData, order_id: finalOrderId };
+        },
+
+        // 4.1 เปลี่ยนสถานะคำสั่งซื้อ (เช่น ปรับกลับเป็น pending สำหรับทดสอบ หรือ reject)
+        async setOrderStatus(orderId, status = 'pending') {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('orders')
+                .update({ status: status })
+                .eq('order_id', orderId)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
         },
 
         // 5. ดึงรายการคำสั่งซื้อ (สำหรับแอดมินหรือผู้ใช้)

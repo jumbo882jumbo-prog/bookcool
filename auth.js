@@ -527,19 +527,23 @@ const orderManager = {
         window.dispatchEvent(new Event('ordersUpdated'));
     },
 
-    createOrder(customerInfo, items, total, slipDataUrl = null) {
+    createOrder(customerInfo, items, total, slipDataUrl = null, customOrderId = null) {
         const orders = this.getOrders();
-        // คำนวณรหัสคำสั่งซื้อใหม่ ป้องกันการชนกับบิลเดิมในระบบหรือ Supabase
-        let maxNum = 16; // ตั้งต้นขั้นต่ำ 16 เพื่อไม่ให้ชนกับบิล ORD-2026-001 ถึง 016
-        orders.forEach(o => {
-            const m = String(o.id).match(/ORD-\d+-(\d+)/);
-            if (m) {
-                const n = parseInt(m[1], 10);
-                if (n > maxNum) maxNum = n;
-            }
-        });
-        const nextNum = maxNum + 1;
-        const orderId = `ORD-2026-${String(nextNum).padStart(3, '0')}`;
+        let orderId = customOrderId;
+
+        if (!orderId) {
+            // คำนวณรหัสคำสั่งซื้อใหม่ ป้องกันการชนกับบิลเดิมในระบบหรือ Supabase
+            let maxNum = 19; // ตั้งต้นขั้นต่ำ 19 ป้องกันชนกับ ORD-2026-001 ถึง 019
+            orders.forEach(o => {
+                const m = String(o.id).match(/ORD-\d+-(\d+)/);
+                if (m) {
+                    const n = parseInt(m[1], 10);
+                    if (n > maxNum) maxNum = n;
+                }
+            });
+            const nextNum = maxNum + 1;
+            orderId = `ORD-2026-${String(nextNum).padStart(3, '0')}`;
+        }
 
         const now = new Date();
         const dateStr = now.getFullYear() + '-' + 
@@ -549,40 +553,61 @@ const orderManager = {
             String(now.getMinutes()).padStart(2, '0') + ':' +
             String(now.getSeconds()).padStart(2, '0');
 
+        // ทำสำเนา items ให้มีข้อมูลครบถ้วนสมบูรณ์
+        const sanitizedItems = (items || []).map(it => ({
+            id: String(it.id || it.ebook_id || '1'),
+            ebook_id: String(it.id || it.ebook_id || '1'),
+            title: it.title || it.book_title || 'หนังสือสั่งซื้อ',
+            author: it.author || it.author_name || 'ไม่ระบุผู้แต่ง',
+            price: typeof it.price === 'string' ? (parseFloat(it.price.replace(/[^\d.-]/g, '')) || 0) : (parseFloat(it.price) || 0),
+            cover: it.cover || it.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+            category: it.category || it.category_name || 'ทั่วไป',
+            quantity: parseInt(it.quantity, 10) || 1
+        }));
+
+        const cleanTotal = typeof total === 'string' ? (parseFloat(total.replace(/[^\d.-]/g, '')) || 0) : (parseFloat(total) || 0);
+
         const newOrder = {
             id: orderId,
             customerName: customerInfo.name || 'ลูกค้าทั่วไป',
             customerEmail: customerInfo.email || 'customer@bookcool.com',
             customerUsername: customerInfo.username || 'guest',
-            items: items,
-            total: total,
+            items: sanitizedItems,
+            total: cleanTotal,
             status: 'pending',
             slipImage: slipDataUrl || 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=400',
             date: dateStr,
             timestamp: now.getTime()
         };
 
-        orders.unshift(newOrder); // เพิ่มไว้บนสุด
-        this.saveOrders(orders);
+        // ลบ order เดิมถ้ามี id ชนกันใน local
+        const filtered = orders.filter(o => o.id !== orderId);
+        filtered.unshift(newOrder); // เพิ่มไว้บนสุด
+        this.saveOrders(filtered);
         return newOrder;
     },
 
     confirmOrder(orderId) {
+        return this.setOrderStatus(orderId, 'approved');
+    },
+
+    setOrderStatus(orderId, status = 'approved') {
         const orders = this.getOrders();
         const target = orders.find(o => o.id === orderId);
         if (target) {
-            target.status = 'approved';
+            target.status = status;
             this.saveOrders(orders);
             return { success: true, order: target };
         } else {
-            // หากดึงข้อมูลสดมาจาก Supabase แต่ยังไม่มีใน local ให้บันทึกสถานะ approved ลง local
-            orders.unshift({
+            // หากดึงข้อมูลสดมาจาก Supabase แต่ยังไม่มีใน local ให้บันทึกลง local
+            const newEntry = {
                 id: orderId,
-                status: 'approved',
+                status: status,
                 date: new Date().toLocaleString('th-TH')
-            });
+            };
+            orders.unshift(newEntry);
             this.saveOrders(orders);
-            return { success: true };
+            return { success: true, order: newEntry };
         }
     },
 

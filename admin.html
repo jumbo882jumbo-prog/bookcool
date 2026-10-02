@@ -449,8 +449,8 @@
                             items: (o.order_items || []).map(item => ({
                                 id: item.ebook_id,
                                 title: item.book_title,
-                                price: parseFloat(item.price),
-                                quantity: item.quantity
+                                price: parseFloat(item.price) || 0,
+                                quantity: parseInt(item.quantity, 10) || 1
                             }))
                         }));
                     }
@@ -465,17 +465,21 @@
             remoteOrders.forEach(item => {
                 map.set(item.id, item);
             });
-            // 2. ซิงก์ Local Orders เข้าไป โดยไม่ให้สถานะ pending ถูกทับ
+            // 2. ซิงก์ Local Orders เข้าไป โดยไม่ให้สถานะ pending หรือรายการหนังสือถูกทับจนหาย
             localOrders.forEach(item => {
                 if (!map.has(item.id)) {
                     map.set(item.id, item);
                 } else {
                     const existing = map.get(item.id);
-                    if (item.status === 'pending') {
+                    if (String(item.status).toLowerCase() === 'pending') {
                         existing.status = 'pending';
                     }
                     if (item.slipImage && !existing.slipImage) {
                         existing.slipImage = item.slipImage;
+                    }
+                    // ถ้า Supabase items ว่าง แต่ local มีรายการหนังสือ ให้ใช้ของ local เสมอ
+                    if ((!existing.items || existing.items.length === 0) && (item.items && item.items.length > 0)) {
+                        existing.items = item.items;
                     }
                 }
             });
@@ -486,16 +490,18 @@
             // 1. รายการ "pending" (รอตรวจสอบสลิป) ต้องอยู่บนสุดเสมอ
             // 2. เรียงตามวันที่ล่าสุด
             orders.sort((a, b) => {
-                if (a.status === 'pending' && b.status !== 'pending') return -1;
-                if (b.status === 'pending' && a.status !== 'pending') return 1;
+                const aPending = !a.status || String(a.status).toLowerCase() === 'pending';
+                const bPending = !b.status || String(b.status).toLowerCase() === 'pending';
+                if (aPending && !bPending) return -1;
+                if (bPending && !aPending) return 1;
                 const timeA = new Date(a.rawDate || a.date || a.timestamp || 0).getTime() || 0;
                 const timeB = new Date(b.rawDate || b.date || b.timestamp || 0).getTime() || 0;
                 return timeB - timeA;
             });
 
             // 1. คำนวณสถิติ Mini Cards
-            const approvedOrders = orders.filter(o => o.status === 'approved');
-            const pendingOrders = orders.filter(o => o.status === 'pending');
+            const approvedOrders = orders.filter(o => String(o.status).toLowerCase() === 'approved');
+            const pendingOrders = orders.filter(o => !o.status || String(o.status).toLowerCase() === 'pending');
             
             const totalApproved = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
             const totalSales = totalApproved + 12000;
@@ -538,20 +544,23 @@
 
             // 3. Render HTML สำหรับแต่ละ Order
             tableBody.innerHTML = filtered.map(order => {
-                const isPending = order.status === 'pending';
+                const isPending = !order.status || String(order.status).toLowerCase() === 'pending';
                 const statusBadge = isPending 
-                    ? `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                    ? `<span class="bg-amber-100 text-amber-800 text-xs px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1 border border-amber-300">
                          <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
                          ⏳ รอตรวจสอบสลิป
                        </span>`
-                    : `<span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-medium inline-flex items-center gap-1">
+                    : `<span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold inline-flex items-center gap-1 border border-green-200">
                          ✅ ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)
                        </span>`;
 
-                const itemsSummary = (order.items || []).map(i => {
-                    const qty = i.quantity || 1;
-                    return `<div class="text-xs text-gray-700 font-medium">• ${i.title} ${qty > 1 ? '<span class="text-gray-400">(' + qty + ' เล่ม)</span>' : ''}</div>`;
-                }).join('');
+                const itemsSummary = (order.items && order.items.length > 0)
+                    ? order.items.map(i => {
+                        const qty = i.quantity || 1;
+                        const p = parseFloat(i.price) || 0;
+                        return `<div class="text-xs text-gray-800 font-medium py-0.5">• ${i.title || 'หนังสือสั่งซื้อ'} <span class="text-blue-600 font-semibold">(฿${p.toFixed(2)} x ${qty})</span></div>`;
+                    }).join('')
+                    : '<span class="text-xs text-gray-400 italic">ไม่มีรายละเอียด</span>';
 
                 const slipBtn = order.slipImage ? `
                     <button onclick="viewSlip('${order.id}', '${encodeURIComponent(order.slipImage)}')" 
@@ -562,27 +571,31 @@
 
                 const actionControl = isPending ? `
                     <button onclick="handleAdminConfirm('${order.id}')"
-                        class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition shadow-sm cursor-pointer flex items-center gap-1 mx-auto">
+                        class="bg-green-600 hover:bg-green-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition shadow-md hover:shadow-lg cursor-pointer flex items-center gap-1.5 mx-auto">
                         ✅ <span>ยืนยันคำสั่งซื้อ</span>
                     </button>
                 ` : `
-                    <div class="flex items-center justify-center gap-1 text-xs text-gray-400 font-medium">
+                    <div class="flex items-center justify-center gap-1.5 text-xs text-gray-500 font-medium">
                         <span>✓ เรียบร้อย</span>
+                        <button onclick="handleAdminReset('${order.id}')" title="เปลี่ยนสถานะกลับเป็นรอตรวจสอบเพื่อทดสอบกดยืนยันใหม่"
+                            class="text-[11px] text-amber-600 hover:text-amber-800 hover:underline cursor-pointer">
+                            (🔄 ทดสอบใหม่)
+                        </button>
                     </div>
                 `;
 
                 return `
-                <tr id="row-${order.id}" class="hover:bg-gray-50/80 transition">
-                    <td class="p-4 font-mono font-medium text-blue-600">
+                <tr id="row-${order.id}" class="hover:bg-gray-50/80 transition ${isPending ? 'bg-amber-50/30' : ''}">
+                    <td class="p-4 font-mono font-bold text-blue-600">
                         #${order.id}
-                        <span class="block text-[11px] text-gray-400 font-sans mt-0.5">${order.date || ''}</span>
+                        <span class="block text-[11px] text-gray-400 font-sans mt-0.5 font-normal">${order.date || ''}</span>
                     </td>
                     <td class="p-4">
-                        <span class="font-medium text-gray-900">${order.customerName || 'ลูกค้าทั่วไป'}</span>
+                        <span class="font-bold text-gray-900">${order.customerName || 'ลูกค้าทั่วไป'}</span>
                         <span class="text-xs text-gray-400 block">${order.customerEmail || ''}</span>
                     </td>
                     <td class="p-4">
-                        ${itemsSummary || '<span class="text-xs text-gray-400">ไม่มีรายละเอียด</span>'}
+                        ${itemsSummary}
                     </td>
                     <td class="p-4 font-bold text-gray-900 text-sm">
                         ฿${(parseFloat(order.total) || 0).toFixed(2)}
@@ -612,6 +625,23 @@
             const res = orderManager.confirmOrder(orderId);
             await renderAdminOrders();
             alert(`🎉 ยืนยันคำสั่งซื้อ #${orderId} เรียบร้อยแล้ว!\n\nสถานะใน Supabase และหน้าเว็บเปลี่ยนเป็น: "ยืนยันแล้ว (ปลดล็อกดาวน์โหลด)"\nลูกค้าผู้สั่งซื้อสามารถเข้าไปกดดาวน์โหลดไฟล์ E-Book ในหน้า "หนังสือของฉัน" ได้ทันทีครับ`);
+        }
+
+        async function handleAdminReset(orderId) {
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    await window.bookcoolDb.setOrderStatus(orderId, 'pending');
+                    console.log('⚡ [Supabase] รีเซ็ตคำสั่งซื้อเป็น pending:', orderId);
+                }
+            } catch (err) {
+                console.warn('⚠️ ไม่สามารถรีเซ็ตใน Supabase ได้:', err.message);
+            }
+
+            if (orderManager && orderManager.setOrderStatus) {
+                orderManager.setOrderStatus(orderId, 'pending');
+            }
+            await renderAdminOrders();
+            alert(`🔄 รีเซ็ตคำสั่งซื้อ #${orderId} เป็นสถานะ "รอตรวจสอบสลิป (Pending)" เรียบร้อยแล้ว!\nปุ่ม [✅ ยืนยันคำสั่งซื้อ] จะแสดงขึ้นมาเพื่อให้คุณทดสอบกดยืนยันได้ทันทีครับ`);
         }
 
         function viewSlip(orderId, encodedSlipUrl) {
