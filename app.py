@@ -136,6 +136,12 @@ def admin():
 def my_books():
     return render_template('my-books.html')
 
+# หน้ารีวิวหนังสือ (Book Reviews Hub)
+@app.route('/reviews')
+@app.route('/reviews.html')
+def reviews():
+    return render_template('reviews.html')
+
 # หน้ารายงานวิเคราะห์ข้อมูล (Reports & Analytics Dashboard)
 @app.route('/reports')
 @app.route('/reports.html')

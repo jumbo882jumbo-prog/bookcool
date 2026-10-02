@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>รีวิวและความคิดเห็นหนังสือ - E-Book Store</title>
+    <!-- โหลด Tailwind CSS จาก CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- โหลดฟอนต์ Prompt จาก Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .star-rating .star {
+            cursor: pointer;
+            transition: transform 0.15s ease, color 0.15s ease;
+        }
+
+        .star-rating .star:hover {
+            transform: scale(1.25);
+        }
+    </style>
+    <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
+    <script src="auth.js"></script>
+    <!-- Supabase JS SDK และ bookcool Integration SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
+</head>
+
+<body class="bg-gray-50 text-gray-800 min-h-screen flex flex-col justify-between">
+
+    <!-- 1. แถบนำทางด้านบน (Navbar) -->
+    <header class="bg-gray-900 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <!-- โลโก้ -->
+            <a href="index.html" class="flex items-center space-x-2 hover:opacity-90 transition">
+                <span class="bg-blue-600 text-white px-2 py-1 rounded font-bold text-sm">E</span>
+                <span class="font-bold text-lg tracking-wide">E-Book Store</span>
+            </a>
+
+            <!-- ช่องค้นหาตรงกลาง -->
+            <div class="hidden md:flex items-center flex-1 max-w-md mx-8">
+                <div class="relative w-full">
+                    <input type="text" id="searchInput" placeholder="ค้นหาชื่อหนังสือ หรือผู้แต่ง..."
+                        class="w-full bg-gray-800 text-sm text-white placeholder-gray-400 rounded-lg pl-4 pr-10 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <button class="absolute right-3 top-2.5 text-gray-400 hover:text-white">🔍</button>
+                </div>
+            </div>
+
+            <!-- เมนูด้านขวา -->
+            <div class="flex items-center space-x-3 sm:space-x-5 text-sm">
+                <a href="index.html" class="hover:text-blue-400 flex items-center gap-1 transition">🏠 หน้าแรก</a>
+                
+                <!-- เมนูรีวิวหนังสือ (หน้าปัจจุบัน Highlight) -->
+                <a href="reviews.html" class="text-amber-400 font-semibold flex items-center gap-1 transition">
+                    ⭐ รีวิวหนังสือ
+                </a>
+
+                <!-- ปุ่มตะกร้าสินค้า -->
+                <a href="cart.html" id="cartLink" class="hover:text-blue-400 flex items-center gap-1 relative transition" title="ดูตะกร้าสินค้า">
+                    🛒 ตะกร้า
+                    <span id="cartCount" class="absolute -top-2 -right-3 bg-blue-600 text-white text-xs rounded-full px-1.5 py-0.2">0</span>
+                </a>
+
+                <!-- ลิงก์ไปหน้าหนังสือของฉัน -->
+                <a href="my-books.html" class="hover:text-blue-400 flex items-center gap-1 transition">
+                    📚 หนังสือของฉัน
+                </a>
+
+                <!-- ลิงก์ Supabase Demo -->
+                <a href="supabase-demo.html" class="bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition border border-emerald-500/30">
+                    ⚡ Supabase
+                </a>
+
+                <!-- ส่วนแสดงสถานะล็อกอิน -->
+                <div class="auth-nav-container flex items-center"></div>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. เนื้อหาหลักของหน้ารีวิว -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- 2.1 ฮีโร่แบนเนอร์ส่วนหัว -->
+        <section class="bg-gradient-to-r from-slate-900 via-indigo-950 to-purple-950 text-white rounded-3xl p-6 sm:p-10 shadow-xl mb-8 relative overflow-hidden">
+            <div class="absolute right-4 -bottom-6 text-8xl md:text-9xl opacity-10 select-none pointer-events-none">
+                💬
+            </div>
+            <div class="relative z-10 max-w-3xl">
+                <div class="inline-flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 text-amber-300 text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                    <span>🌟</span> ชุมชนนักอ่าน E-Book & ระบบรีวิวแบบ Real-time
+                </div>
+                <h1 class="text-2xl sm:text-4xl font-extrabold tracking-tight mb-3">
+                    รีวิวและความคิดเห็นจากผู้อ่านจริง
+                </h1>
+                <p class="text-sm sm:text-base text-gray-300 leading-relaxed mb-6">
+                    ร่วมแบ่งปันความประทับใจ ให้คะแนนดาว และอ่านรีวิวหนังสือทุกเล่มในร้าน 
+                    ข้อมูลถูกบันทึกและซิงก์สดกับตาราง <code class="bg-white/10 text-amber-300 px-2 py-0.5 rounded font-mono text-xs">public.book_reviews</code> ใน Supabase ทันที
+                </p>
+
+                <!-- สถิติสรุปภาพรวม 4 กล่อง -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                        <div class="text-xs text-gray-400">⭐ คะแนนเฉลี่ย</div>
+                        <div class="text-xl sm:text-2xl font-bold text-amber-400 mt-0.5" id="statAvgRating">4.8 / 5.0</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                        <div class="text-xs text-gray-400">💬 รีวิวทั้งหมด</div>
+                        <div class="text-xl sm:text-2xl font-bold text-white mt-0.5" id="statTotalReviews">0 รีวิว</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                        <div class="text-xs text-gray-400">📚 เล่มที่ได้รับการรีวิว</div>
+                        <div class="text-xl sm:text-2xl font-bold text-emerald-400 mt-0.5" id="statReviewedBooks">0 เล่ม</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/10">
+                        <div class="text-xs text-gray-400">⚡ สถานะฐานข้อมูล</div>
+                        <div class="text-xs sm:text-sm font-semibold text-emerald-300 mt-1.5 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                            <span>Supabase Live</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2.2 เลย์เอาต์แบ่ง 2 คอลัมน์: ฟอร์มเขียนรีวิว (ซ้าย) + รายการรีวิวทั้งหมด (ขวา) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+
+            <!-- ฝั่งซ้าย: แบบฟอร์มเขียนรีวิวหนังสือเล่มใหม่ -->
+            <div class="lg:col-span-1 bg-white rounded-3xl p-6 shadow-sm border border-gray-200 sticky top-20">
+                <div class="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
+                    <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                        <span>✍️</span> เขียนรีวิวหนังสือ
+                    </h2>
+                    <span class="text-[11px] bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-full">
+                        ส่งเข้า Supabase
+                    </span>
+                </div>
+
+                <form id="reviewForm" onsubmit="handleReviewSubmit(event)" class="space-y-4">
+                    <!-- 1. เลือกหนังสือ -->
+                    <div>
+                        <label for="reviewBookSelect" class="block text-xs font-semibold text-gray-700 mb-1">
+                            เลือกหนังสือที่ต้องการรีวิว <span class="text-red-500">*</span>
+                        </label>
+                        <select id="reviewBookSelect" required onchange="handleBookSelectChange()"
+                            class="w-full text-xs border border-gray-300 rounded-xl px-3 py-2.5 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                            <option value="">-- กรุณาเลือกหนังสือ --</option>
+                        </select>
+                    </div>
+
+                    <!-- พรีวิวหนังสือที่เลือก -->
+                    <div id="bookPreviewCard" class="hidden p-3 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center gap-3">
+                        <img id="previewBookCover" src="" alt="ปกหนังสือ" class="w-12 h-16 object-cover rounded-lg shadow-xs flex-shrink-0">
+                        <div class="min-w-0">
+                            <div id="previewBookTitle" class="text-xs font-bold text-gray-900 truncate"></div>
+                            <div id="previewBookAuthor" class="text-[11px] text-gray-500 truncate"></div>
+                            <div id="previewBookPrice" class="text-[11px] font-semibold text-blue-600"></div>
+                        </div>
+                    </div>
+
+                    <!-- 2. ให้คะแนนดาว (Interactive Star Rating) -->
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">
+                            ให้คะแนนความพึงพอใจ <span class="text-red-500">*</span>
+                        </label>
+                        <div class="flex items-center gap-2">
+                            <div class="star-rating flex text-2xl text-gray-300 select-none" id="starContainer">
+                                <span class="star" data-rating="1" onclick="setRating(1)">★</span>
+                                <span class="star" data-rating="2" onclick="setRating(2)">★</span>
+                                <span class="star" data-rating="3" onclick="setRating(3)">★</span>
+                                <span class="star" data-rating="4" onclick="setRating(4)">★</span>
+                                <span class="star" data-rating="5" onclick="setRating(5)">★</span>
+                            </div>
+                            <span id="ratingLabel" class="text-xs font-bold text-amber-600">5 ดาว (ยอดเยี่ยมมาก)</span>
+                        </div>
+                        <input type="hidden" id="selectedRating" value="5">
+                    </div>
+
+                    <!-- 3. ชื่อผู้รีวิว -->
+                    <div>
+                        <label for="reviewerName" class="block text-xs font-semibold text-gray-700 mb-1">
+                            ชื่อของคุณ หรือนามแฝง
+                        </label>
+                        <input type="text" id="reviewerName" placeholder="เช่น สมชาย นักอ่าน หรือผู้ใช้งานทั่วไป"
+                            class="w-full text-xs border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition">
+                    </div>
+
+                    <!-- 4. ข้อความรีวิว -->
+                    <div>
+                        <label for="reviewComment" class="block text-xs font-semibold text-gray-700 mb-1">
+                            ความคิดเห็นและความประทับใจ <span class="text-red-500">*</span>
+                        </label>
+                        <textarea id="reviewComment" rows="4" required
+                            placeholder="เขียนรีวิวหนังสือเล่มนี้ เช่น เนื้อหาเป็นอย่างไร นำไปประยุกต์ใช้ได้จริงไหม และแนะนำให้อ่านหรือไม่..."
+                            class="w-full text-xs border border-gray-300 rounded-xl p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 transition leading-relaxed"></textarea>
+                    </div>
+
+                    <!-- ปุ่มส่งรีวิว -->
+                    <button type="submit" id="submitReviewBtn"
+                        class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-xl text-xs transition shadow-md hover:shadow-lg flex items-center justify-center gap-2 cursor-pointer">
+                        <span>🚀</span> บันทึกรีวิวเข้าสู่ Supabase
+                    </button>
+                </form>
+            </div>
+
+            <!-- ฝั่งขวา: รายการรีวิวทั้งหมด พร้อมแถบกรองและค้นหา -->
+            <div class="lg:col-span-2 space-y-4">
+
+                <!-- แถบกรองรีวิว Filter & Search Bar -->
+                <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <!-- ตัวเลือกกรองตามดาว -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 text-xs">
+                        <button onclick="filterByStars('all')" class="filter-star-btn bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-xl transition" data-star="all">
+                            ทั้งหมด
+                        </button>
+                        <button onclick="filterByStars(5)" class="filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition" data-star="5">
+                            5 ★
+                        </button>
+                        <button onclick="filterByStars(4)" class="filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition" data-star="4">
+                            4 ★
+                        </button>
+                        <button onclick="filterByStars(3)" class="filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition" data-star="3">
+                            3 ★
+                        </button>
+                        <button onclick="filterByStars(2)" class="filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition" data-star="2">
+                            2 ★
+                        </button>
+                        <button onclick="filterByStars(1)" class="filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition" data-star="1">
+                            1 ★
+                        </button>
+                    </div>
+
+                    <!-- ช่องค้นหาข้อความรีวิว -->
+                    <div class="relative w-full sm:w-60">
+                        <input type="text" id="reviewFilterSearch" oninput="handleReviewSearch(this.value)"
+                            placeholder="ค้นหาในข้อความรีวิว..."
+                            class="w-full text-xs bg-gray-50 border border-gray-300 rounded-xl pl-3 pr-8 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <span class="absolute right-2.5 top-1.5 text-xs text-gray-400">🔍</span>
+                    </div>
+                </div>
+
+                <!-- กล่องแสดงรายการรีวิว (Reviews Container) -->
+                <div id="reviewsListContainer" class="space-y-3.5">
+                    <!-- โหลด Skeleton ระหว่างรอข้อมูล -->
+                    <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-200 animate-pulse text-center text-gray-400 text-xs">
+                        ⏳ กำลังเชื่อมต่อและดึงข้อมูลรีวิวจาก Supabase (public.book_reviews)...
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- 3. ส่วนท้ายของหน้าเว็บ Footer -->
+    <footer class="bg-gray-900 text-gray-400 text-xs py-8 border-t border-gray-800 mt-12">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center space-x-2">
+                <span class="bg-blue-600 text-white px-2 py-0.5 rounded font-bold">E</span>
+                <span class="font-bold text-white text-sm">E-Book Store</span>
+                <span class="text-gray-500">| ระบบรีวิวหนังสือดิจิทัล</span>
+            </div>
+            <div class="flex items-center gap-4 text-gray-400">
+                <a href="index.html" class="hover:text-white transition">หน้าร้านค้า</a>
+                <a href="my-books.html" class="hover:text-white transition">หนังสือของฉัน</a>
+                <a href="admin.html" class="hover:text-white transition">จัดการระบบหลังบ้าน</a>
+            </div>
+            <p>© 2026 E-Book Store Community. Connected to Supabase Database.</p>
+        </div>
+    </footer>
+
+    <!-- จาวาสคริปต์ควบคุมการทำงานของหน้ารีวิวและเชื่อมต่อ Supabase -->
+    <script>
+        let allReviewsData = [];
+        let allBooksList = [];
+        let currentStarFilter = 'all';
+        let currentSearchQuery = '';
+
+        // 1. เริ่มต้นทำงานเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', async () => {
+            initUserIdentity();
+            await loadBooksForSelect();
+            await fetchAllReviews();
+            setupRealtimeSubscription();
+        });
+
+        // 2. เติมข้อมูลผู้ใช้ปัจจุบันที่ล็อกอินอยู่ลงในฟอร์ม
+        function initUserIdentity() {
+            const user = auth.getCurrentUser();
+            const nameInput = document.getElementById('reviewerName');
+            if (user && nameInput) {
+                nameInput.value = user.name || user.username;
+                nameInput.disabled = true;
+                nameInput.title = 'ล็อกอินด้วยบัญชีนี้แล้ว';
+            }
+        }
+
+        // 3. โหลดรายชื่อหนังสือทั้งหมดลงใน Dropdown
+        async function loadBooksForSelect() {
+            const selectEl = document.getElementById('reviewBookSelect');
+            if (!selectEl) return;
+
+            try {
+                // ดึงจาก Supabase ก่อน หากมี
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const books = await window.bookcoolDb.getBooks();
+                    if (Array.isArray(books) && books.length > 0) {
+                        allBooksList = books;
+                    }
+                }
+            } catch (e) {
+                console.warn('โหลดหนังสือจาก Supabase ไม่สำเร็จ ดึงจาก local:', e);
+            }
+
+            if (allBooksList.length === 0) {
+                // ดึงจาก local fallback
+                allBooksList = (typeof ebooks_database !== 'undefined') ? ebooks_database : [
+                    { ebook_id: 1, title: "Lean Startup & Product Strategy", author_name: "ณัฐพร นวัตกรรม", price: 320, cover_image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 2, title: "กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)", author_name: "กวี ศรีสยาม", price: 195, cover_image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 3, title: "Practical Generative AI for Developers", author_name: "ดร. ธีรภัทร ปัญญาประดิษฐ์", price: 490, cover_image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 4, title: "The Modern Growth Hacking & Digital Marketing", author_name: "อนันต์ การตลาดดิจิทัล", price: 390, cover_image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 5, title: "จิตวิทยาการบริหารเวลา Focus & Productivity", author_name: "พญ. ธิดารัตน์ สุขภาพจิต", price: 250, cover_image: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 6, title: "คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน", author_name: "ชัชวาล เศรษฐศาสตร์", price: 290, cover_image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 7, title: "Full-Stack Web Development with Python & Modern Stack", author_name: "วรวิทย์ โค้ดดิ้ง", price: 450, cover_image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=600" },
+                    { ebook_id: 8, title: "Mastering Database Design & SQL", author_name: "สุรศักดิ์ ข้อมูลแม่นยำ", price: 300, cover_image: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=600" }
+                ];
+            }
+
+            // เช็คว่ามี param book_id มาจาก URL หรือไม่ เช่น reviews.html?book_id=3
+            const urlParams = new URLSearchParams(window.location.search);
+            const targetBookId = urlParams.get('book_id');
+
+            selectEl.innerHTML = '<option value="">-- กรุณาเลือกหนังสือ --</option>' + 
+                allBooksList.map(b => `
+                    <option value="${b.ebook_id || b.id}" ${String(b.ebook_id || b.id) === String(targetBookId) ? 'selected' : ''}>
+                        ${b.title} - ฿${parseFloat(b.price || 0).toFixed(2)} (${b.author_name || b.author || 'ไม่ระบุผู้แต่ง'})
+                    </option>
+                `).join('');
+
+            if (targetBookId) {
+                handleBookSelectChange();
+            }
+        }
+
+        // 4. เมื่อเลือกหนังสือใน Dropdown ให้แสดงพรีวิวปก
+        function handleBookSelectChange() {
+            const selectEl = document.getElementById('reviewBookSelect');
+            const previewCard = document.getElementById('bookPreviewCard');
+            const coverImg = document.getElementById('previewBookCover');
+            const titleEl = document.getElementById('previewBookTitle');
+            const authorEl = document.getElementById('previewBookAuthor');
+            const priceEl = document.getElementById('previewBookPrice');
+
+            const val = selectEl.value;
+            if (!val) {
+                previewCard.classList.add('hidden');
+                return;
+            }
+
+            const book = allBooksList.find(b => String(b.ebook_id || b.id) === String(val));
+            if (book) {
+                coverImg.src = book.cover_image || book.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400';
+                titleEl.innerText = book.title;
+                authorEl.innerText = book.author_name || book.author || 'ไม่ระบุผู้แต่ง';
+                priceEl.innerText = `฿${parseFloat(book.price || 0).toFixed(2)}`;
+                previewCard.classList.remove('hidden');
+            }
+        }
+
+        // 5. ปรับคะแนนดาว Interactive
+        const ratingTexts = {
+            1: "1 ดาว (ควรปรับปรุง)",
+            2: "2 ดาว (พอใช้)",
+            3: "3 ดาว (ปานกลาง)",
+            4: "4 ดาว (ดีมาก แนะนำ)",
+            5: "5 ดาว (ยอดเยี่ยมมาก ประทับใจมาก)"
+        };
+
+        function setRating(rating) {
+            document.getElementById('selectedRating').value = rating;
+            document.getElementById('ratingLabel').innerText = ratingTexts[rating];
+
+            const stars = document.querySelectorAll('#starContainer .star');
+            stars.forEach((s, idx) => {
+                if (idx < rating) {
+                    s.classList.add('text-amber-400');
+                    s.classList.remove('text-gray-300');
+                } else {
+                    s.classList.remove('text-amber-400');
+                    s.classList.add('text-gray-300');
+                }
+            });
+        }
+        // ตั้งค่า 5 ดาวเริ่มต้น
+        setRating(5);
+
+        // 6. ดึงรีวิวทั้งหมดจาก Supabase (public.book_reviews)
+        async function fetchAllReviews() {
+            const container = document.getElementById('reviewsListContainer');
+
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const reviews = await window.bookcoolDb.getAllReviews();
+                    if (Array.isArray(reviews) && reviews.length > 0) {
+                        allReviewsData = reviews;
+                    }
+                }
+            } catch (err) {
+                console.warn('ดึงรีวิวสดไม่สำเร็จ ใช้ข้อมูลสำรอง:', err.message);
+            }
+
+            if (allReviewsData.length === 0) {
+                allReviewsData = [
+                    {
+                        review_id: 1,
+                        ebook_id: 1,
+                        rating: 5,
+                        comment: "หนังสือเล่มนี้เนื้อหาเข้าใจง่ายมาก อธิบายกระบวนการทำ MVP ได้เห็นภาพชัดเจน เหมาะสำหรับคนที่กำลังเริ่มปั้นโปรเจกต์ใหม่",
+                        created_at: "2026-10-02T05:00:00Z",
+                        ebooks: { title: "Lean Startup & Product Strategy", author_name: "ณัฐพร นวัตกรรม", cover_image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600" },
+                        profiles: { full_name: "สมชาย สมาชิกนักอ่าน", username: "user" }
+                    },
+                    {
+                        review_id: 2,
+                        ebook_id: 3,
+                        rating: 5,
+                        comment: "เนื้อหา AI ทันสมัย โค้ดตัวอย่างนำไปต่อยอด RAG และ Agent ได้จริงครับ แนะนำมากสำหรับ Developer ยุคใหม่",
+                        created_at: "2026-10-01T14:30:00Z",
+                        ebooks: { title: "Practical Generative AI for Developers", author_name: "ดร. ธีรภัทร ปัญญาประดิษฐ์", cover_image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600" },
+                        profiles: { full_name: "พลอยแสง (ผู้ดูแลระบบ)", username: "admin" }
+                    },
+                    {
+                        review_id: 3,
+                        ebook_id: 6,
+                        rating: 4,
+                        comment: "คู่มือภาษีอ่านเข้าใจง่าย ไม่ซับซ้อน ช่วยคำนวณและประหยัดเงินได้เยอะเลย คุ้มค่าราคามาก",
+                        created_at: "2026-09-30T10:15:00Z",
+                        ebooks: { title: "คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน", author_name: "ชัชวาล เศรษฐศาสตร์", cover_image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600" },
+                        profiles: { full_name: "วรรณิศา รัตนโชติ", username: "wannisa" }
+                    }
+                ];
+            }
+
+            updateStatistics();
+            renderReviews();
+        }
+
+        // 7. คำนวณและอัปเดตกล่องสถิติ
+        function updateStatistics() {
+            const totalEl = document.getElementById('statTotalReviews');
+            const avgEl = document.getElementById('statAvgRating');
+            const booksCountEl = document.getElementById('statReviewedBooks');
+
+            if (totalEl) totalEl.innerText = `${allReviewsData.length} รีวิว`;
+
+            if (allReviewsData.length > 0) {
+                const sum = allReviewsData.reduce((acc, r) => acc + (parseInt(r.rating) || 5), 0);
+                const avg = (sum / allReviewsData.length).toFixed(1);
+                if (avgEl) avgEl.innerText = `${avg} / 5.0`;
+
+                const uniqueBooks = new Set(allReviewsData.map(r => r.ebook_id)).size;
+                if (booksCountEl) booksCountEl.innerText = `${uniqueBooks} เล่ม`;
+            }
+        }
+
+        // 8. แสดงผลการ์ดรีวิวทั้งหมดตามตัวกรอง
+        function renderReviews() {
+            const container = document.getElementById('reviewsListContainer');
+            if (!container) return;
+
+            let filtered = [...allReviewsData];
+
+            // กรองตามดาว
+            if (currentStarFilter !== 'all') {
+                filtered = filtered.filter(r => parseInt(r.rating) === parseInt(currentStarFilter));
+            }
+
+            // กรองตามคำค้นหา
+            if (currentSearchQuery.trim()) {
+                const q = currentSearchQuery.toLowerCase().trim();
+                filtered = filtered.filter(r => {
+                    const comment = (r.comment || '').toLowerCase();
+                    const bookTitle = (r.ebooks?.title || '').toLowerCase();
+                    const author = (r.ebooks?.author_name || '').toLowerCase();
+                    const name = (r.profiles?.full_name || r.profiles?.username || '').toLowerCase();
+                    return comment.includes(q) || bookTitle.includes(q) || author.includes(q) || name.includes(q);
+                });
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                <div class="bg-white rounded-3xl p-10 text-center border border-gray-200 shadow-sm">
+                    <span class="text-4xl block mb-2">🔍</span>
+                    <h3 class="text-sm font-bold text-gray-800">ไม่พบรีวิวที่ตรงกับเงื่อนไข</h3>
+                    <p class="text-xs text-gray-400 mt-1">ลองเปลี่ยนตัวกรองดาว หรือคำค้นหาใหม่อีกครั้ง</p>
+                </div>
+                `;
+                return;
+            }
+
+            const currentUser = auth.getCurrentUser();
+            const isAdmin = currentUser && currentUser.role === 'admin';
+
+            container.innerHTML = filtered.map(r => {
+                const book = r.ebooks || allBooksList.find(b => String(b.ebook_id || b.id) === String(r.ebook_id)) || {
+                    title: `หนังสือรหัส #${r.ebook_id}`,
+                    author_name: 'ไม่ระบุผู้แต่ง',
+                    cover_image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400'
+                };
+
+                const stars = '★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5));
+                const reviewerName = r.profiles?.full_name || r.profiles?.username || 'ผู้อ่านสมาชิก';
+                const avatarChar = reviewerName.substring(0, 1).toUpperCase();
+                
+                let dateDisplay = 'ล่าสุด';
+                if (r.created_at) {
+                    try {
+                        dateDisplay = new Date(r.created_at).toLocaleDateString('th-TH', {
+                            year: 'numeric', month: 'short', day: 'numeric'
+                        });
+                    } catch (e) {}
+                }
+
+                return `
+                <div class="bg-white rounded-3xl p-5 shadow-sm border border-gray-200 hover:border-blue-300 transition duration-200 flex flex-col gap-3 group">
+                    
+                    <!-- ส่วนหัวการ์ด: ข้อมูลหนังสือ + ดาว -->
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <a href="book-detail.html?id=${r.ebook_id}">
+                                <img src="${book.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400'}" 
+                                     alt="${book.title}" 
+                                     class="w-12 h-16 object-cover rounded-xl shadow-xs group-hover:scale-105 transition flex-shrink-0">
+                            </a>
+                            <div class="min-w-0">
+                                <a href="book-detail.html?id=${r.ebook_id}" class="text-xs sm:text-sm font-bold text-gray-900 hover:text-blue-600 transition truncate block">
+                                    ${book.title}
+                                </a>
+                                <div class="text-[11px] text-gray-500 truncate">
+                                    ผู้แต่ง: ${book.author_name || 'ไม่ระบุ'}
+                                </div>
+                                <div class="text-amber-400 text-xs font-bold tracking-wider mt-0.5">
+                                    ${stars} <span class="text-gray-500 font-normal text-[11px]">(${r.rating}/5)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ป้ายแสดงวันที่ -->
+                        <span class="text-[11px] text-gray-400 font-mono whitespace-nowrap bg-gray-50 px-2 py-1 rounded-lg border border-gray-100">
+                            📅 ${dateDisplay}
+                        </span>
+                    </div>
+
+                    <!-- ข้อความรีวิว -->
+                    <div class="p-3.5 bg-gray-50/70 rounded-2xl border border-gray-100 text-xs text-gray-700 leading-relaxed font-sans">
+                        “${escapeHtml(r.comment || 'ไม่มีข้อความรีวิว')}”
+                    </div>
+
+                    <!-- ส่วนล่างการ์ด: ข้อมูลผู้รีวิว + ปุ่มเป็นประโยชน์ + สิทธิ์ Admin ลบ -->
+                    <div class="flex items-center justify-between pt-1 border-t border-gray-100 text-xs">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shadow-xs">
+                                ${avatarChar}
+                            </div>
+                            <span class="font-semibold text-gray-800 text-[11px]">${reviewerName}</span>
+                            <span class="text-[10px] bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.2 rounded font-medium">✓ ผู้อ่านจริง</span>
+                        </div>
+
+                        <div class="flex items-center gap-2">
+                            <button onclick="handleHelpful(this)" class="text-[11px] text-gray-500 hover:text-blue-600 transition flex items-center gap-1 cursor-pointer">
+                                <span>👍</span> <span>เป็นประโยชน์ (<span class="like-count">0</span>)</span>
+                            </button>
+
+                            ${isAdmin ? `
+                            <button onclick="handleAdminDeleteReview(${r.review_id})" class="text-[11px] text-red-600 hover:text-red-800 transition font-semibold cursor-pointer ml-2" title="ลบรีวิวนี้ (Admin Only)">
+                                🗑️ ลบ
+                            </button>
+                            ` : ''}
+                        </div>
+                    </div>
+
+                </div>
+                `;
+            }).join('');
+        }
+
+        // 9. กรองตามดาว
+        function filterByStars(star) {
+            currentStarFilter = star;
+            const buttons = document.querySelectorAll('.filter-star-btn');
+            buttons.forEach(btn => {
+                if (btn.getAttribute('data-star') === String(star)) {
+                    btn.className = "filter-star-btn bg-blue-600 text-white font-semibold px-3 py-1.5 rounded-xl transition";
+                } else {
+                    btn.className = "filter-star-btn bg-gray-100 hover:bg-gray-200 text-gray-700 px-2.5 py-1.5 rounded-xl transition";
+                }
+            });
+            renderReviews();
+        }
+
+        // 10. ค้นหาข้อความ
+        function handleReviewSearch(val) {
+            currentSearchQuery = val;
+            renderReviews();
+        }
+
+        // 11. ส่งรีวิวเข้า Supabase (public.book_reviews)
+        async function handleReviewSubmit(event) {
+            event.preventDefault();
+            const submitBtn = document.getElementById('submitReviewBtn');
+            const originalText = submitBtn.innerHTML;
+
+            const bookId = document.getElementById('reviewBookSelect').value;
+            const rating = parseInt(document.getElementById('selectedRating').value || '5', 10);
+            const comment = document.getElementById('reviewComment').value.trim();
+            const reviewerNameInput = document.getElementById('reviewerName').value.trim();
+
+            if (!bookId) {
+                alert('⚠️ กรุณาเลือกหนังสือที่ต้องการรีวิวก่อนครับ');
+                return;
+            }
+            if (!comment) {
+                alert('⚠️ กรุณากรอกความคิดเห็นเกี่ยวกับหนังสือก่อนกดส่งครับ');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span>⏳</span> กำลังบันทึกลง Supabase...';
+
+            const user = auth.getCurrentUser();
+            const userId = user?.id || null;
+
+            try {
+                let inserted = null;
+
+                // 1. บันทึกลง Supabase book_reviews table
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    inserted = await window.bookcoolDb.addReview({
+                        ebookId: bookId,
+                        userId: userId,
+                        rating: rating,
+                        comment: comment
+                    });
+                }
+
+                // 2. จำลองอ็อบเจกต์ใส่หน้าทันที
+                const book = allBooksList.find(b => String(b.ebook_id || b.id) === String(bookId));
+                const newReview = {
+                    review_id: inserted?.review_id || Date.now(),
+                    ebook_id: Number(bookId),
+                    rating: rating,
+                    comment: comment,
+                    created_at: new Date().toISOString(),
+                    ebooks: book ? { title: book.title, author_name: book.author_name || book.author, cover_image: book.cover_image || book.cover } : null,
+                    profiles: { full_name: reviewerNameInput || user?.name || 'ผู้อ่านสมาชิก', username: user?.username || 'reader' }
+                };
+
+                allReviewsData.unshift(newReview);
+                updateStatistics();
+                renderReviews();
+
+                // รีเซ็ตฟอร์ม
+                document.getElementById('reviewComment').value = '';
+                document.getElementById('reviewBookSelect').value = '';
+                document.getElementById('bookPreviewCard').classList.add('hidden');
+                setRating(5);
+
+                alert(`🎉 ส่งรีวิวสำเร็จเรียบร้อยแล้ว!\n\nความคิดเห็นของคุณถูกบันทึกลงในฐานข้อมูล Supabase ตาราง "book_reviews" เรียบร้อยแล้วครับ ขอบคุณที่ร่วมแบ่งปัน!`);
+
+            } catch (err) {
+                console.error("Submit review error", err);
+                alert('❌ เกิดข้อผิดพลาดในการบันทึกรีวิว: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // 12. ลบรีวิวสำหรับ Admin
+        async function handleAdminDeleteReview(reviewId) {
+            if (!confirm(`คุณต้องการลบรีวิวรหัส #${reviewId} ออกจากฐานข้อมูล Supabase ใช่หรือไม่?`)) {
+                return;
+            }
+
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    await window.bookcoolDb.deleteReview(reviewId);
+                }
+                allReviewsData = allReviewsData.filter(r => r.review_id !== reviewId);
+                updateStatistics();
+                renderReviews();
+                alert(`🗑️ ลบรีวิว #${reviewId} สำเร็จ`);
+            } catch (err) {
+                alert('❌ ไม่สามารถลบรีวิวได้: ' + err.message);
+            }
+        }
+
+        // 13. กดปุ่มเป็นประโยชน์
+        function handleHelpful(btn) {
+            const countEl = btn.querySelector('.like-count');
+            if (countEl) {
+                let c = parseInt(countEl.innerText || '0', 10);
+                countEl.innerText = c + 1;
+                btn.classList.add('text-blue-600', 'font-bold');
+            }
+        }
+
+        // 14. Real-time Subscription ฟังการเปลี่ยนแปลงของตาราง book_reviews
+        function setupRealtimeSubscription() {
+            if (window.bookcoolDb && typeof window.bookcoolDb.subscribeToTable === 'function') {
+                window.bookcoolDb.subscribeToTable('book_reviews', () => {
+                    console.log('⚡ [Real-time] ตาราง book_reviews มีการเปลี่ยนแปลง รีเฟรชข้อมูล...');
+                    fetchAllReviews();
+                });
+            }
+        }
+
+        // Helper escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.innerText = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+
+</html>

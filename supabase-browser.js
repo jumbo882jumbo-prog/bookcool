@@ -399,7 +399,7 @@
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
             const { data, error } = await this.client
                 .from('book_reviews')
-                .select('*, profiles(username, full_name, avatar_url)')
+                .select('*, profiles(username, full_name, avatar_url), ebooks(title, cover_image, author_name)')
                 .eq('ebook_id', ebookId)
                 .order('created_at', { ascending: false });
 
@@ -407,18 +407,42 @@
             return data;
         },
 
-        // 9. เพิ่มรีวิว
+        // 8.1 ดึงรีวิวทั้งหมดของทุกเล่มในระบบ (สำหรับหน้ารวมรีวิว)
+        async getAllReviews() {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('book_reviews')
+                .select('*, profiles(username, full_name, avatar_url), ebooks(ebook_id, title, cover_image, author_name, category_name)')
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 9. เพิ่มรีวิวใหม่ลงในตาราง book_reviews
         async addReview({ ebookId, userId, rating, comment }) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
             const { data, error } = await this.client
                 .from('book_reviews')
                 .insert([{
-                    ebook_id: ebookId,
-                    user_id: userId,
-                    rating,
-                    comment
+                    ebook_id: Number(ebookId),
+                    user_id: userId || null,
+                    rating: parseInt(rating, 10),
+                    comment: String(comment)
                 }])
-                .select();
+                .select('*, profiles(username, full_name, avatar_url), ebooks(title, cover_image, author_name)');
+
+            if (error) throw error;
+            return data && data[0] ? data[0] : null;
+        },
+
+        // 9.1 ลบรีวิว (สิทธิ์ Admin)
+        async deleteReview(reviewId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('book_reviews')
+                .delete()
+                .eq('review_id', reviewId);
 
             if (error) throw error;
             return data;
