@@ -47,6 +47,28 @@
 
         configure,
 
+        // ฟังก์ชัน Realtime: แจ้งเตือนเมื่อตารางใน Supabase มีการแก้ไข/เพิ่ม/ลบ
+        subscribeToTable(tableName, onChange) {
+            if (!this.client) return null;
+            try {
+                const channel = this.client
+                    .channel(`realtime_${tableName}_${Date.now()}`)
+                    .on(
+                        'postgres_changes',
+                        { event: '*', schema: 'public', table: tableName },
+                        payload => {
+                            console.log(`⚡ [Supabase Realtime] มีการอัปเดตในตาราง "${tableName}":`, payload);
+                            if (typeof onChange === 'function') onChange(payload);
+                        }
+                    )
+                    .subscribe();
+                return channel;
+            } catch (err) {
+                console.warn('Realtime subscription error:', err);
+                return null;
+            }
+        },
+
         // 1. ดึงข้อมูลหนังสือทั้งหมด พร้อมชื่อหมวดหมู่
         async getBooks({ categoryId = null, searchQuery = '', sort = 'latest' } = {}) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้ติดตั้งหรือเชื่อมต่อ');

@@ -300,9 +300,19 @@
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', renderMyBooks);
+            document.addEventListener('DOMContentLoaded', () => {
+                renderMyBooks();
+                if (window.bookcoolDb) {
+                    window.bookcoolDb.subscribeToTable('orders', () => renderMyBooks());
+                    window.bookcoolDb.subscribeToTable('user_library', () => renderMyBooks());
+                }
+            });
         } else {
             renderMyBooks();
+            if (window.bookcoolDb) {
+                window.bookcoolDb.subscribeToTable('orders', () => renderMyBooks());
+                window.bookcoolDb.subscribeToTable('user_library', () => renderMyBooks());
+            }
         }
 
         window.addEventListener('pageshow', renderMyBooks);

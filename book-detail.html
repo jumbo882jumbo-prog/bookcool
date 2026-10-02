@@ -638,9 +638,25 @@
 
         // แสดงข้อมูลหนังสือลงบนหน้าเว็บแบบไดนามิก
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', renderBookDetail);
+            document.addEventListener('DOMContentLoaded', () => {
+                renderBookDetail();
+                if (window.bookcoolDb) {
+                    window.bookcoolDb.subscribeToTable('ebooks', () => renderBookDetail());
+                    window.bookcoolDb.subscribeToTable('book_reviews', () => {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        loadReviews(urlParams.get('id') || '1');
+                    });
+                }
+            });
         } else {
             renderBookDetail();
+            if (window.bookcoolDb) {
+                window.bookcoolDb.subscribeToTable('ebooks', () => renderBookDetail());
+                window.bookcoolDb.subscribeToTable('book_reviews', () => {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    loadReviews(urlParams.get('id') || '1');
+                });
+            }
         }
         window.addEventListener('pageshow', renderBookDetail);
         window.addEventListener('storage', (e) => {

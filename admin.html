@@ -576,9 +576,19 @@
         }
 
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initAdminDashboard);
+            document.addEventListener('DOMContentLoaded', () => {
+                initAdminDashboard();
+                if (window.bookcoolDb) {
+                    window.bookcoolDb.subscribeToTable('orders', () => renderAdminOrders());
+                    window.bookcoolDb.subscribeToTable('ebooks', () => renderAdminBooks());
+                }
+            });
         } else {
             initAdminDashboard();
+            if (window.bookcoolDb) {
+                window.bookcoolDb.subscribeToTable('orders', () => renderAdminOrders());
+                window.bookcoolDb.subscribeToTable('ebooks', () => renderAdminBooks());
+            }
         }
 
         window.addEventListener('pageshow', initAdminDashboard);

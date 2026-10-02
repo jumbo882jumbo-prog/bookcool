@@ -781,13 +781,8 @@
             }
         }
 
-        // เริ่มต้นโหลดหน้าเว็บและดึงข้อมูลหนังสือ (รองรับทั้ง LocalStorage และ Supabase)
-        async function initPage() {
-            allBooks = getStoredBooks();
-            renderBooks();
-            setupEventListeners();
-
-            // ดึงข้อมูลสดจาก Supabase (หากมีการเชื่อมต่อและเปิดใช้งาน)
+        // ฟังก์ชันดึงหนังสือสดจาก Supabase (เมื่อมีการแก้ไขตารางใน Supabase จะอัปเดตหน้าเว็บสดทันที)
+        async function fetchAndRenderSupabaseBooks() {
             try {
                 if (window.bookcoolDb && window.bookcoolDb.client) {
                     const supaBooks = await window.bookcoolDb.getBooks();
@@ -807,8 +802,29 @@
                     }
                 }
             } catch (err) {
-                // ใช้ข้อมูล Fallback LocalStorage เดิมอย่างราบรื่น
-                console.log('ℹ️ [bookcool] รันด้วย Local Database โหมดปกติ');
+                console.log('ℹ️ [bookcool] ดึง Supabase ไม่สำเร็จ ใช้ Local Database สำรอง:', err.message);
+            }
+        }
+
+        // เริ่มต้นโหลดหน้าเว็บและดึงข้อมูลหนังสือ (Supabase Real-Time First)
+        async function initPage() {
+            allBooks = getStoredBooks();
+            renderBooks();
+            setupEventListeners();
+
+            // 1. ดึงข้อมูลสดจาก Supabase ทันที
+            await fetchAndRenderSupabaseBooks();
+
+            // 2. เปิดรับฟังการเปลี่ยนแปลงสดจาก Supabase (Realtime)
+            // เมื่อคุณแก้ข้อมูลในตาราง Supabase หน้าเว็บจะเปลี่ยนตามทันทีโดยไม่ต้องรีเฟรช!
+            if (window.bookcoolDb && !window._subscribedRealtime) {
+                window._subscribedRealtime = true;
+                window.bookcoolDb.subscribeToTable('ebooks', () => {
+                    fetchAndRenderSupabaseBooks();
+                });
+                window.bookcoolDb.subscribeToTable('categories', () => {
+                    fetchAndRenderSupabaseBooks();
+                });
             }
 
             // หากมีหนังสือเพิ่งเพิ่มมาใหม่ ให้เลื่อนหน้าจอไปหาการ์ดนั้นทันที
