@@ -6,8 +6,8 @@
 
 (function (window) {
     // 1. กำหนดค่าเริ่มต้น หรือดึงจาก localStorage หากผู้ใช้เคยตั้งค่าไว้
-    const defaultUrl = 'https://your-project-id.supabase.co';
-    const defaultKey = 'your-anon-key-here';
+    const defaultUrl = 'https://cowzufrrwntajvhiqajg.supabase.co';
+    const defaultKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNvd3p1ZnJyd250YWp2aGlxYWpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4NjIwMDksImV4cCI6MjEwNjQzODAwOX0.9oVNjcWkNNfyhOO8cPKYSccQCU2kRV6z8L1ZX0Px0gs';
 
     const savedConfig = JSON.parse(localStorage.getItem('bookcool_supabase_config') || '{}');
     const SUPABASE_URL = savedConfig.url || window.ENV_SUPABASE_URL || defaultUrl;
