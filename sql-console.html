@@ -467,44 +467,193 @@
         let currentQueryResult = null;
         let queryHistory = [];
 
+        // ฟังก์ชันอ่านข้อมูล LocalStorage / ค่าเริ่มต้นเพื่อสร้างเป็นข้อมูลพร้อมใช้งานทันที
+        function getLocalDatabaseData() {
+            let books = [];
+            try {
+                const rawBooks = localStorage.getItem('ebooks_store');
+                if (rawBooks) books = JSON.parse(rawBooks);
+            } catch (e) {}
+
+            if (!books || books.length === 0) {
+                books = [
+                    { id: 1, title: 'Lean Startup & Product Strategy', author: 'ณัฐพร นวัตกรรม', category: 'ธุรกิจ & การตลาด', price: 320.00, description: 'คู่มือทดสอบไอเดียธุรกิจ' },
+                    { id: 2, title: 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', author: 'กวี ศรีสยาม', category: 'วรรณกรรม & นวนิยาย', price: 195.00, description: 'นวนิยายไซไฟแฟนตาซี' }
+                ];
+            }
+
+            const sqlBooks = books.map((b, idx) => ({
+                ebook_id: Number(b.id || idx + 1),
+                title: String(b.title || ''),
+                author_name: String(b.author || 'ไม่ระบุ'),
+                category_name: String(b.category || 'ทั่วไป'),
+                price: parseFloat(b.price) || 0.00,
+                description: String(b.description || '')
+            }));
+
+            let orders = [];
+            try {
+                const rawOrders = localStorage.getItem('orders_list');
+                if (rawOrders) orders = JSON.parse(rawOrders);
+            } catch (e) {}
+            if (!orders || orders.length === 0) {
+                orders = (typeof defaultOrders !== 'undefined') ? defaultOrders : [];
+            }
+
+            const sqlOrders = [];
+            const sqlOrderItems = [];
+            let itemIndex = 1;
+            orders.forEach(o => {
+                sqlOrders.push({
+                    order_id: String(o.id),
+                    customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
+                    customer_email: String(o.customerEmail || 'user@bookcool.com'),
+                    total: parseFloat(o.total || o.total_amount) || 0.00,
+                    total_amount: parseFloat(o.total || o.total_amount) || 0.00,
+                    status: String(o.status || 'pending'),
+                    order_date: String(o.date || o.order_date || '2026-10-01 12:00')
+                });
+
+                (o.items || []).forEach(item => {
+                    sqlOrderItems.push({
+                        item_id: itemIndex++,
+                        order_id: String(o.id),
+                        ebook_id: Number(item.id || 1),
+                        book_title: String(item.title || ''),
+                        price: parseFloat(item.price) || 0.00,
+                        quantity: Number(item.quantity || 1)
+                    });
+                });
+            });
+
+            let users = [];
+            try {
+                const rawUsers = localStorage.getItem('registered_users');
+                if (rawUsers) users = JSON.parse(rawUsers);
+            } catch (e) {}
+
+            if (!users || users.length === 0) {
+                users = (typeof auth !== 'undefined' && auth.defaultAccounts) ? auth.defaultAccounts : [
+                    { username: 'admin', name: 'พลอยแสง (ผู้ดูแลระบบ)', email: 'admin@bookcool.com', role: 'admin' },
+                    { username: 'user', name: 'สมชาย สมาชิกนักอ่าน', email: 'user@bookcool.com', role: 'user' }
+                ];
+            }
+
+            const sqlUsers = users.map(u => ({
+                username: String(u.username),
+                name: String(u.name || ''),
+                email: String(u.email || ''),
+                role: String(u.role || 'user')
+            }));
+
+            const categoryMap = {};
+            sqlBooks.forEach(b => {
+                const cat = b.category_name || 'ทั่วไป';
+                categoryMap[cat] = (categoryMap[cat] || 0) + 1;
+            });
+
+            const sqlCategories = Object.keys(categoryMap).map((catName, idx) => ({
+                category_id: idx + 1,
+                category_name: catName,
+                book_count: categoryMap[catName]
+            }));
+
+            return { sqlBooks, sqlOrders, sqlOrderItems, sqlUsers, sqlCategories };
+        }
+
+        // นำชุดข้อมูลใส่ลงใน AlaSQL In-Memory Database และอัปเดตหน้าจอ
+        function applyDatabaseTables(sqlBooks, sqlOrders, sqlOrderItems, sqlUsers, sqlCategories) {
+            if (window.alasql) {
+                try {
+                    alasql('DROP TABLE IF EXISTS ebooks');
+                    alasql('DROP TABLE IF EXISTS orders');
+                    alasql('DROP TABLE IF EXISTS order_items');
+                    alasql('DROP TABLE IF EXISTS users');
+                    alasql('DROP TABLE IF EXISTS categories');
+
+                    alasql('CREATE TABLE ebooks');
+                    alasql('CREATE TABLE orders');
+                    alasql('CREATE TABLE order_items');
+                    alasql('CREATE TABLE users');
+                    alasql('CREATE TABLE categories');
+
+                    if (sqlBooks && sqlBooks.length > 0) alasql('INSERT INTO ebooks VALUES ?', [sqlBooks]);
+                    if (sqlOrders && sqlOrders.length > 0) alasql('INSERT INTO orders VALUES ?', [sqlOrders]);
+                    if (sqlOrderItems && sqlOrderItems.length > 0) alasql('INSERT INTO order_items VALUES ?', [sqlOrderItems]);
+                    if (sqlUsers && sqlUsers.length > 0) alasql('INSERT INTO users VALUES ?', [sqlUsers]);
+                    if (sqlCategories && sqlCategories.length > 0) alasql('INSERT INTO categories VALUES ?', [sqlCategories]);
+                } catch (tblErr) {
+                    console.warn("AlaSQL standard insert error, fallback to memory tables:", tblErr);
+                    const curDb = (alasql.databases && alasql.databases[alasql.useid]) || (alasql.databases && alasql.databases.alasql);
+                    if (curDb && curDb.tables) {
+                        if (curDb.tables.ebooks) curDb.tables.ebooks.data = sqlBooks;
+                        if (curDb.tables.orders) curDb.tables.orders.data = sqlOrders;
+                        if (curDb.tables.order_items) curDb.tables.order_items.data = sqlOrderItems;
+                        if (curDb.tables.users) curDb.tables.users.data = sqlUsers;
+                        if (curDb.tables.categories) curDb.tables.categories.data = sqlCategories;
+                    }
+                }
+            }
+
+            // เก็บตารางไว้ในตัวแปรสำรองสำหรับ fallback
+            window._fallbackDb = {
+                ebooks: sqlBooks,
+                orders: sqlOrders,
+                order_items: sqlOrderItems,
+                users: sqlUsers,
+                categories: sqlCategories
+            };
+
+            // อัปเดตตัวเลขแถวในหน้าต่าง Schema Explorer
+            const elBooks = document.getElementById('count-ebooks');
+            if (elBooks) elBooks.innerText = `${sqlBooks.length} แถว`;
+            const elOrders = document.getElementById('count-orders');
+            if (elOrders) elOrders.innerText = `${sqlOrders.length} แถว`;
+            const elItems = document.getElementById('count-order_items');
+            if (elItems) elItems.innerText = `${sqlOrderItems.length} แถว`;
+            const elUsers = document.getElementById('count-users');
+            if (elUsers) elUsers.innerText = `${sqlUsers.length} แถว`;
+            const elCats = document.getElementById('count-categories');
+            if (elCats) elCats.innerText = `${sqlCategories.length} แถว`;
+        }
+
         // ฟังก์ชันสร้างและซิงก์ข้อมูลจาก Supabase / LocalStorage เข้าสู่ In-Memory Database (AlaSQL)
         async function refreshDatabase(showAlert = false) {
             try {
-                let sqlBooks = [];
-                let sqlOrders = [];
-                let sqlOrderItems = [];
-                let sqlUsers = [];
-                let sqlCategories = [];
+                // 1. นำข้อมูลท้องถิ่นมาใช้ก่อน เพื่อให้ทำงานได้ทันที
+                const local = getLocalDatabaseData();
+                let sqlBooks = local.sqlBooks;
+                let sqlOrders = local.sqlOrders;
+                let sqlOrderItems = local.sqlOrderItems;
+                let sqlUsers = local.sqlUsers;
+                let sqlCategories = local.sqlCategories;
 
-                // ⚡ พยายามดึงข้อมูลสดจาก Supabase ก่อนเป็นอันดับแรก
+                // 2. พยายามดึงข้อมูลสดจาก Supabase (ถ้าเชื่อมต่อได้)
                 let fetchedFromSupabase = false;
                 if (window.bookcoolDb && window.bookcoolDb.client) {
                     try {
-                        const { data: supaBooks } = await window.bookcoolDb.client.from('ebooks').select('*');
-                        const { data: supaOrders } = await window.bookcoolDb.client.from('orders').select('*');
-                        const { data: supaItems } = await window.bookcoolDb.client.from('order_items').select('*');
-                        const { data: supaCats } = await window.bookcoolDb.client.from('categories').select('*');
-                        const { data: supaUsers } = await window.bookcoolDb.client.from('users').select('*');
+                        const [resBooks, resOrders, resItems, resCats, resUsers] = await Promise.allSettled([
+                            window.bookcoolDb.client.from('ebooks').select('*'),
+                            window.bookcoolDb.client.from('orders').select('*'),
+                            window.bookcoolDb.client.from('order_items').select('*'),
+                            window.bookcoolDb.client.from('categories').select('*'),
+                            window.bookcoolDb.client.from('users').select('*')
+                        ]);
+
+                        const supaBooks = resBooks.status === 'fulfilled' ? resBooks.value.data : null;
+                        const supaOrders = resOrders.status === 'fulfilled' ? resOrders.value.data : null;
+                        const supaItems = resItems.status === 'fulfilled' ? resItems.value.data : null;
+                        const supaCats = resCats.status === 'fulfilled' ? resCats.value.data : null;
+                        const supaUsers = resUsers.status === 'fulfilled' ? resUsers.value.data : null;
 
                         if (supaBooks && supaBooks.length > 0) {
                             sqlBooks = supaBooks.map(b => ({
                                 ebook_id: Number(b.ebook_id),
                                 title: String(b.title || ''),
                                 author_name: String(b.author_name || 'ไม่ระบุ'),
-                                category_name: String(b.category_name || 'ทั่วไป'),
+                                category_name: String(b.category_name || (b.categories && b.categories.category_name) || 'ทั่วไป'),
                                 price: parseFloat(b.price) || 0.00,
                                 description: String(b.description || '')
-                            }));
-                        }
-
-                        if (supaItems && supaItems.length > 0) {
-                            sqlOrderItems = supaItems.map(item => ({
-                                item_id: Number(item.item_id),
-                                order_id: String(item.order_id),
-                                ebook_id: Number(item.ebook_id || 1),
-                                book_title: String(item.book_title || ''),
-                                price: parseFloat(item.price) || 0.00,
-                                quantity: Number(item.quantity || 1)
                             }));
                         }
 
@@ -520,6 +669,17 @@
                             }));
                         }
 
+                        if (supaItems && supaItems.length > 0) {
+                            sqlOrderItems = supaItems.map(item => ({
+                                item_id: Number(item.item_id),
+                                order_id: String(item.order_id),
+                                ebook_id: Number(item.ebook_id || 1),
+                                book_title: String(item.book_title || ''),
+                                price: parseFloat(item.price) || 0.00,
+                                quantity: Number(item.quantity || 1)
+                            }));
+                        }
+
                         if (supaCats && supaCats.length > 0) {
                             sqlCategories = supaCats.map(c => ({
                                 category_id: Number(c.category_id),
@@ -530,7 +690,7 @@
 
                         if (supaUsers && supaUsers.length > 0) {
                             sqlUsers = supaUsers.map(u => ({
-                                user_id: Number(u.user_id),
+                                user_id: Number(u.user_id || 1),
                                 username: String(u.username),
                                 name: String(u.name || ''),
                                 email: String(u.email || ''),
@@ -538,145 +698,17 @@
                             }));
                         }
 
-                        if (sqlBooks.length > 0 || sqlOrders.length > 0) {
+                        if ((supaBooks && supaBooks.length > 0) || (supaOrders && supaOrders.length > 0)) {
                             fetchedFromSupabase = true;
-                            console.log('⚡ [SQL Console] ซิงก์ข้อมูลสดจาก Supabase เรียบร้อย');
+                            console.log('⚡ [SQL Console] ซิงก์ข้อมูลสดจาก Supabase สำเร็จ');
                         }
                     } catch (supaErr) {
-                        console.warn('⚠️ ไม่สามารถดึงข้อมูลสดจาก Supabase ได้ ใช้ Local Storage สำรอง:', supaErr.message);
+                        console.warn('⚠️ ซิงก์ Supabase ไม่สำเร็จ ใช้ข้อมูลในระบบ:', supaErr.message);
                     }
                 }
 
-                // หากยังไม่ได้ข้อมูลจาก Supabase ให้ใช้ LocalStorage สำรอง
-                if (!fetchedFromSupabase || sqlBooks.length === 0) {
-                    let books = [];
-                    try {
-                        const rawBooks = localStorage.getItem('ebooks_store');
-                        if (rawBooks) books = JSON.parse(rawBooks);
-                    } catch (e) {}
-
-                    if (!books || books.length === 0) {
-                        books = [
-                            { id: 1, title: 'Lean Startup & Product Strategy', author: 'ณัฐพร นวัตกรรม', category: 'ธุรกิจ & การตลาด', price: 320.00, description: 'คู่มือทดสอบไอเดียธุรกิจ' },
-                            { id: 2, title: 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', author: 'กวี ศรีสยาม', category: 'วรรณกรรม & นวนิยาย', price: 195.00, description: 'นวนิยายไซไฟแฟนตาซี' }
-                        ];
-                    }
-
-                    sqlBooks = books.map((b, idx) => ({
-                        ebook_id: Number(b.id || idx + 1),
-                        title: String(b.title || ''),
-                        author_name: String(b.author || 'ไม่ระบุ'),
-                        category_name: String(b.category || 'ทั่วไป'),
-                        price: parseFloat(b.price) || 0.00,
-                        description: String(b.description || '')
-                    }));
-                }
-
-                if (!fetchedFromSupabase || sqlOrders.length === 0) {
-                    let orders = [];
-                    try {
-                        const rawOrders = localStorage.getItem('orders_list');
-                        if (rawOrders) orders = JSON.parse(rawOrders);
-                    } catch (e) {}
-                    if (!orders || orders.length === 0) {
-                        orders = (typeof defaultOrders !== 'undefined') ? defaultOrders : [];
-                    }
-
-                    let itemIndex = 1;
-                    orders.forEach(o => {
-                        sqlOrders.push({
-                            order_id: String(o.id),
-                            customer_name: String(o.customerName || 'ลูกค้าทั่วไป'),
-                            customer_email: String(o.customerEmail || 'user@bookcool.com'),
-                            total: parseFloat(o.total) || 0.00,
-                            total_amount: parseFloat(o.total) || 0.00,
-                            status: String(o.status || 'pending'),
-                            order_date: String(o.date || '2026-10-01 12:00')
-                        });
-
-                        (o.items || []).forEach(item => {
-                            sqlOrderItems.push({
-                                item_id: itemIndex++,
-                                order_id: String(o.id),
-                                ebook_id: Number(item.id || 1),
-                                book_title: String(item.title || ''),
-                                price: parseFloat(item.price) || 0.00,
-                                quantity: Number(item.quantity || 1)
-                            });
-                        });
-                    });
-                }
-
-                // 3. ดึงข้อมูลผู้ใช้งาน (users)
-                let users = [];
-                try {
-                    const rawUsers = localStorage.getItem('registered_users');
-                    if (rawUsers) users = JSON.parse(rawUsers);
-                } catch (e) {}
-
-                if (!users || users.length === 0) {
-                    users = (auth && auth.defaultAccounts) ? auth.defaultAccounts : [
-                        { username: 'admin', name: 'พลอยแสง (ผู้ดูแลระบบ)', email: 'admin@bookcool.com', role: 'admin' },
-                        { username: 'user', name: 'สมชาย สมาชิกนักอ่าน', email: 'user@bookcool.com', role: 'user' }
-                    ];
-                }
-
-                const sqlUsers = users.map(u => ({
-                    username: String(u.username),
-                    name: String(u.name || ''),
-                    email: String(u.email || ''),
-                    role: String(u.role || 'user')
-                }));
-
-                // 4. คำนวณตารางหมวดหมู่ (categories)
-                const categoryMap = {};
-                sqlBooks.forEach(b => {
-                    const cat = b.category_name || 'ทั่วไป';
-                    categoryMap[cat] = (categoryMap[cat] || 0) + 1;
-                });
-
-                const sqlCategories = Object.keys(categoryMap).map((catName, idx) => ({
-                    category_id: idx + 1,
-                    category_name: catName,
-                    book_count: categoryMap[catName]
-                }));
-
-                // บันทึกตารางลงใน AlaSQL In-Memory Database
-                if (window.alasql) {
-                    alasql('DROP TABLE IF EXISTS ebooks');
-                    alasql('DROP TABLE IF EXISTS orders');
-                    alasql('DROP TABLE IF EXISTS order_items');
-                    alasql('DROP TABLE IF EXISTS users');
-                    alasql('DROP TABLE IF EXISTS categories');
-
-                    alasql('CREATE TABLE ebooks');
-                    alasql('CREATE TABLE orders');
-                    alasql('CREATE TABLE order_items');
-                    alasql('CREATE TABLE users');
-                    alasql('CREATE TABLE categories');
-
-                    alasql.tables.ebooks.data = sqlBooks;
-                    alasql.tables.orders.data = sqlOrders;
-                    alasql.tables.order_items.data = sqlOrderItems;
-                    alasql.tables.users.data = sqlUsers;
-                    alasql.tables.categories.data = sqlCategories;
-                }
-
-                // เก็บตารางไว้ในตัวแปรสำรองสำหรับ fallback
-                window._fallbackDb = {
-                    ebooks: sqlBooks,
-                    orders: sqlOrders,
-                    order_items: sqlOrderItems,
-                    users: sqlUsers,
-                    categories: sqlCategories
-                };
-
-                // อัปเดตตัวเลขแถวในหน้าต่าง Schema Explorer
-                document.getElementById('count-ebooks').innerText = `${sqlBooks.length} แถว`;
-                document.getElementById('count-orders').innerText = `${sqlOrders.length} แถว`;
-                document.getElementById('count-order_items').innerText = `${sqlOrderItems.length} แถว`;
-                document.getElementById('count-users').innerText = `${sqlUsers.length} แถว`;
-                document.getElementById('count-categories').innerText = `${sqlCategories.length} แถว`;
+                // นำตารางไปใช้งาน
+                applyDatabaseTables(sqlBooks, sqlOrders, sqlOrderItems, sqlUsers, sqlCategories);
 
                 if (showAlert) {
                     alert(`✅ ซิงก์ข้อมูลจากระบบเรียบร้อยแล้ว!\n• หนังสือ: ${sqlBooks.length} เล่ม\n• คำสั่งซื้อ: ${sqlOrders.length} รายการ\n• สมาชิก: ${sqlUsers.length} คน\nพร้อมสำหรับการรันคำสั่ง SQL แล้วครับ`);
@@ -988,13 +1020,28 @@ ORDER BY total_spent DESC;`
 
         // เริ่มต้นโหลดฐานข้อมูลและคำสั่งแรกอัตโนมัติ
         async function initConsole() {
-            await refreshDatabase();
-            // ตั้งค่าคำสั่งแรกเป็นตัวอย่าง
+            // 1. โหลดข้อมูลเข้า In-Memory ทันทีแบบ Synchronous เพื่อให้พร้อมใช้งาน 100% ทันทีที่เปิดหน้า
+            const local = getLocalDatabaseData();
+            applyDatabaseTables(local.sqlBooks, local.sqlOrders, local.sqlOrderItems, local.sqlUsers, local.sqlCategories);
+
+            // 2. ตั้งค่าคำสั่งแรกเป็นตัวอย่างในกล่องเขียนคำสั่ง
             const editor = document.getElementById('sqlInput');
             if (editor && !editor.value) {
                 editor.value = "SELECT * FROM ebooks ORDER BY price DESC;";
-                setTimeout(() => executeSQL(), 200);
             }
+
+            // 3. รันคำสั่งแรกทันทีเพื่อให้ผู้ใช้เห็นตารางข้อมูลโดยไม่ต้องรอ
+            setTimeout(() => {
+                executeSQL();
+            }, 60);
+
+            // 4. ซิงก์ข้อมูลสดจาก Supabase ในพื้นหลังแบบ Asynchronous
+            refreshDatabase(false).then(() => {
+                const ed = document.getElementById('sqlInput');
+                if (ed && ed.value === "SELECT * FROM ebooks ORDER BY price DESC;") {
+                    executeSQL();
+                }
+            }).catch(e => console.warn("Supabase background sync note:", e));
         }
 
         if (document.readyState === 'loading') {
