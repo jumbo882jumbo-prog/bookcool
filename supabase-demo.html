@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Supabase Integration Demo - Bookcool</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Font Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Supabase JS CDN (Version 2) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Supabase Browser SDK สำหรับ Bookcool -->
+    <script src="supabase-browser.js"></script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+        }
+        .code-font {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+    <!-- Navbar -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center space-x-3">
+                <a href="index.html" class="flex items-center space-x-2">
+                    <span class="bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 px-2.5 py-1 rounded-lg font-black text-sm shadow-lg shadow-emerald-500/20">⚡</span>
+                    <span class="font-bold text-lg text-white">bookcool <span class="text-emerald-400 text-xs px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-800">Supabase Connected</span></span>
+                </a>
+            </div>
+            <div class="flex items-center space-x-3 text-sm">
+                <a href="index.html" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">🏪 กลับหน้าร้านค้า</a>
+                <a href="sql-console.html" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">💻 SQL Console</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- Header Hero -->
+        <div class="p-6 md:p-8 rounded-3xl bg-gradient-to-br from-slate-800/80 via-slate-900 to-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="max-w-3xl space-y-3">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-semibold border border-emerald-500/20">
+                    🟢 Supabase Database (PostgreSQL 8 Tables)
+                </div>
+                <h1 class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">
+                    ตัวอย่างการเชื่อมต่อข้อมูลระหว่าง <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">bookcool</span> กับ <span class="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-sky-400">Supabase</span>
+                </h1>
+                <p class="text-sm md:text-base text-slate-400 leading-relaxed">
+                    หน้าตัวอย่างนี้จำลองและทดสอบการดึงข้อมูลสดจากฐานข้อมูล 8 ตาราง (เช่น <code class="text-emerald-400 font-mono">ebooks</code>, <code class="text-emerald-400 font-mono">categories</code>, <code class="text-emerald-400 font-mono">orders</code>, <code class="text-emerald-400 font-mono">user_library</code>) มาเรนเดอร์บนหน้าเว็บ
+                </p>
+            </div>
+        </div>
+
+        <!-- 1. การตั้งค่าการเชื่อมต่อ (Configuration Panel) -->
+        <div class="bg-slate-800/50 backdrop-blur border border-slate-700/80 rounded-2xl p-6 shadow-xl space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                    <span>🔑</span> 1. กำหนดค่าการเชื่อมต่อ Supabase (API Settings)
+                </h2>
+                <span id="connectionBadge" class="text-xs px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    ⚠️ ใช้ค่าจำลอง (กรุณาใส่ Supabase URL & Key เพื่อเชื่อมฐานข้อมูลจริง)
+                </span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">SUPABASE_URL</label>
+                    <input type="text" id="cfgUrl" placeholder="https://xxxxxxxx.supabase.co"
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 mb-1">SUPABASE_ANON_KEY</label>
+                    <input type="password" id="cfgKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI..."
+                        class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition">
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+                <button onclick="saveAndConnect()" 
+                    class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold px-4 py-2 rounded-xl text-sm transition shadow-lg shadow-emerald-600/30 flex items-center gap-1.5">
+                    <span>💾</span> บันทึกและทดสอบเชื่อมต่อ
+                </button>
+                <button onclick="loadMockData()" 
+                    class="bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-4 py-2 rounded-xl text-sm transition">
+                    🔄 โหลดข้อมูลตัวอย่าง 8 เล่ม (Demo Fallback)
+                </button>
+                <span id="cfgMsg" class="text-xs text-emerald-400 font-medium"></span>
+            </div>
+        </div>
+
+        <!-- 2. ฟังก์ชันตัวอย่างที่ 1: ดึงรายการหนังสือ (ebooks + categories JOIN) -->
+        <div class="space-y-4">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                    <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                        <span>📚</span> 2. ตัวอย่างการดึงข้อมูลหนังสือจาก Supabase (<code class="text-emerald-400 font-mono text-sm">ebooks JOIN categories</code>)
+                    </h2>
+                    <p class="text-xs text-slate-400 mt-1">ฟังก์ชัน <code class="code-font text-emerald-400">bookcoolDb.getBooks()</code> รองรับการกรองหมวดหมู่ และค้นหาแบบ Real-Time</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <select id="catFilter" onchange="filterAndRenderBooks()" class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="all">📂 ทุกหมวดหมู่</option>
+                    </select>
+                    <input type="text" id="bookSearch" oninput="filterAndRenderBooks()" placeholder="🔍 ค้นหาชื่อ/ผู้แต่ง..."
+                        class="bg-slate-800 border border-slate-700 text-xs rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-emerald-500">
+                </div>
+            </div>
+
+            <!-- Grid แสดงหนังสือ -->
+            <div id="booksGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <!-- ข้อมูลจะถูก render โดย Javascript -->
+                <div class="col-span-full py-12 text-center text-slate-400 bg-slate-800/30 rounded-2xl border border-slate-800 animate-pulse">
+                    กำลังโหลดข้อมูลหนังสือ...
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. แท็บแสดงตัวอย่าง Code Snippets การเชื่อมโยง -->
+        <div class="bg-slate-800/40 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span>💻</span> 3. ตัวอย่างโค้ดสำหรับนำไปใส่ในหน้าเว็บของ bookcool
+            </h2>
+
+            <div class="space-y-3">
+                <!-- Snippet 1 -->
+                <details class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden group" open>
+                    <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-emerald-400 hover:text-emerald-300 flex items-center justify-between">
+                        <span>1) ตัวอย่างโค้ดดึงหนังสือทั้งหมดมาแสดงในการ์ด (Vanilla JS / HTML)</span>
+                        <span class="text-xs text-slate-500 group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <pre class="p-4 text-xs text-slate-300 bg-slate-950 overflow-x-auto code-font border-t border-slate-800"><code>// 1. นำเข้า script ใน &lt;head&gt;
+// &lt;script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"&gt;&lt;/script&gt;
+// &lt;script src="supabase-browser.js"&gt;&lt;/script&gt;
+
+// 2. ฟังก์ชันดึงหนังสือมาแสดงผล
+async function loadBooks() {
+    try {
+        // เรียกใช้ฟังก์ชันที่สร้างไว้ใน supabase-browser.js
+        const books = await window.bookcoolDb.getBooks({
+            categoryId: 'all',     // หรือระบุ ID เช่น 1
+            searchQuery: '',       // ข้อความค้นหา
+            sort: 'latest'         // 'latest' | 'price-low' | 'price-high'
+        });
+
+        console.log('ข้อมูลหนังสือจาก Supabase:', books);
+        // นำ books ไป .map() แสดงลงใน HTML Grid ได้ทันที
+        renderBookCards(books);
+    } catch (err) {
+        console.error('ไม่สามารถดึงข้อมูลได้:', err.message);
+    }
+}</code></pre>
+                </details>
+
+                <!-- Snippet 2 -->
+                <details class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden group">
+                    <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-emerald-400 hover:text-emerald-300 flex items-center justify-between">
+                        <span>2) ตัวอย่างโค้ดบันทึกการสั่งซื้อ (หน้า checkout.html เชื่อม orders & order_items)</span>
+                        <span class="text-xs text-slate-500 group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <pre class="p-4 text-xs text-slate-300 bg-slate-950 overflow-x-auto code-font border-t border-slate-800"><code>async function submitOrderToSupabase(cartItems, customerInfo, slipBase64) {
+    const orderData = {
+        orderId: 'ORD-' + Date.now(),
+        userId: auth.getCurrentUser()?.id || null,
+        customerName: customerInfo.name,
+        customerEmail: customerInfo.email,
+        totalAmount: cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0),
+        slipUrl: slipBase64,
+        items: cartItems.map(item => ({
+            id: item.id,
+            title: item.title,
+            price: item.price,
+            quantity: item.quantity
+        }))
+    };
+
+    const newOrder = await window.bookcoolDb.createOrder(orderData);
+    alert('บันทึกคำสั่งซื้อสำเร็จ! รหัสบิล: ' + newOrder.order_id);
+}</code></pre>
+                </details>
+
+                <!-- Snippet 3 -->
+                <details class="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden group">
+                    <summary class="px-4 py-3 cursor-pointer text-sm font-semibold text-emerald-400 hover:text-emerald-300 flex items-center justify-between">
+                        <span>3) ตัวอย่างโค้ดสำหรับ React + Vite (supabaseClient.js)</span>
+                        <span class="text-xs text-slate-500 group-open:rotate-180 transition">▼</span>
+                    </summary>
+                    <pre class="p-4 text-xs text-slate-300 bg-slate-950 overflow-x-auto code-font border-t border-slate-800"><code>// ในโปรเจกต์ React / Vite
+import { supabase } from './supabaseClient';
+import { useEffect, useState } from 'react';
+
+export function BookList() {
+    const [books, setBooks] = useState([]);
+
+    useEffect(() => {
+        async function fetchBooks() {
+            const { data, error } = await supabase
+                .from('ebooks')
+                .select('*, categories(category_name)')
+                .order('ebook_id', { ascending: false });
+
+            if (!error) setBooks(data);
+        }
+        fetchBooks();
+    }, []);
+
+    return (
+        &lt;div className="grid grid-cols-4 gap-4"&gt;
+            {books.map(b =&gt; &lt;div key={b.ebook_id}&gt;{b.title} - ฿{b.price}&lt;/div&gt;)}
+        &lt;/div&gt;
+    );
+}</code></pre>
+                </details>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="mt-12 py-6 border-t border-slate-800 text-center text-xs text-slate-500">
+        bookcool E-Book Store © 2026 - Supabase Integration Module
+    </footer>
+
+    <!-- Script ควบคุมหน้า Demo -->
+    <script>
+        // ข้อมูลจำลองกรณี Supabase ยังไม่ได้ใส่ Key
+        const fallbackBooks = [
+            {
+                ebook_id: 1,
+                title: "Lean Startup & Product Strategy",
+                author_name: "ณัฐพร นวัตกรรม",
+                price: 320.00,
+                category_name: "ธุรกิจ & การตลาด",
+                cover_image: "https://images.unsplash.com/photo-1553729459-efe14ef6055d?auto=format&fit=crop&q=80&w=600",
+                description: "คู่มือทดสอบไอเดียธุรกิจ สร้าง MVP และปรับเปลี่ยนทิศทางอย่างรวดเร็วโดยไม่เผางบประมาณ"
+            },
+            {
+                ebook_id: 2,
+                title: "กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)",
+                author_name: "กวี ศรีสยาม",
+                price: 195.00,
+                category_name: "วรรณกรรม & นวนิยาย",
+                cover_image: "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=600",
+                description: "นวนิยายไซไฟแฟนตาซี การเดินทางข้ามห้วงกาลเวลาเพื่อกอบกู้ดวงดาวที่สาบสูญ"
+            },
+            {
+                ebook_id: 3,
+                title: "Practical Generative AI for Developers",
+                author_name: "ดร. ธีรภัทร ปัญญาประดิษฐ์",
+                price: 490.00,
+                category_name: "วิทยาศาสตร์ข้อมูล & AI",
+                cover_image: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&q=80&w=600",
+                description: "คู่มือนักพัฒนาในการเชื่อมต่อ LLM APIs, Prompt Engineering, RAG Architecture และการสร้าง AI Agents"
+            },
+            {
+                ebook_id: 4,
+                title: "The Modern Growth Hacking & Digital Marketing",
+                author_name: "อนันต์ การตลาดดิจิทัล",
+                price: 390.00,
+                category_name: "ธุรกิจ & การตลาด",
+                cover_image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=600",
+                description: "กลยุทธ์ยิงแอดและสร้าง Funnel ปิดการขายอัตโนมัติ สำหรับธุรกิจออนไลน์ที่ต้องการสเกลยอดขาย"
+            },
+            {
+                ebook_id: 5,
+                title: "จิตวิทยาการบริหารเวลา Focus & Productivity",
+                author_name: "พญ. ธิดารัตน์ สุขภาพจิต",
+                price: 250.00,
+                category_name: "พัฒนาตนเอง & จิตวิทยา",
+                cover_image: "https://images.unsplash.com/photo-1506784983877-45594efa4cbe?auto=format&fit=crop&q=80&w=600",
+                description: "เคล็ดลับทางประสาทวิทยาในการกำจัดนิสัยผลัดวันประกันพรุ่งและโฟกัสกับงานสำคัญอย่างเด็ดขาด"
+            },
+            {
+                ebook_id: 6,
+                title: "คู่มือวางแผนภาษีและการลงทุนฉบับประชาชน",
+                author_name: "ชัชวาล เศรษฐศาสตร์",
+                price: 290.00,
+                category_name: "การเงิน & การลงทุน",
+                cover_image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&q=80&w=600",
+                description: "เข้าใจการลดหย่อนภาษีอย่างถูกต้อง พร้อมกลยุทธ์สร้างอิสรภาพทางการเงินผ่านกองทุนรวมและหุ้นปันผล"
+            },
+            {
+                ebook_id: 7,
+                title: "Full-Stack Web Development with Python & Modern Stack",
+                author_name: "อาจารย์ พรชัย เทคโนโลยี",
+                price: 420.00,
+                category_name: "เทคโนโลยี & การเขียนโปรแกรม",
+                cover_image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600",
+                description: "สร้างเว็บแอปพลิเคชันระดับโปรดักชันด้วย Flask, RESTful API และฐานข้อมูล พร้อมการทำ Deployment"
+            },
+            {
+                ebook_id: 8,
+                title: "Mastering Database Design & SQL",
+                author_name: "ดร. กิตติพงษ์ วิริยะกุล",
+                price: 299.00,
+                category_name: "เทคโนโลยี & การเขียนโปรแกรม",
+                cover_image: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&q=80&w=600",
+                description: "เจาะลึกการออกแบบฐานข้อมูลเชิงสัมพันธ์ตั้งแต่ระดับพื้นฐาน Normalization 3NF จนถึงการ Optimize Query"
+            }
+        ];
+
+        let currentLoadedBooks = [];
+
+        // โหลดค่าจาก LocalStorage มาแสดงในช่อง input
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = JSON.parse(localStorage.getItem('bookcool_supabase_config') || '{}');
+            if (saved.url) document.getElementById('cfgUrl').value = saved.url;
+            if (saved.key) document.getElementById('cfgKey').value = saved.key;
+
+            if (saved.url && saved.key && !saved.url.includes('your-project-id')) {
+                testAndLoadRealSupabase(saved.url, saved.key);
+            } else {
+                loadMockData();
+            }
+        });
+
+        // ฟังก์ชันบันทึกและเชื่อมต่อ
+        async function saveAndConnect() {
+            const url = document.getElementById('cfgUrl').value.trim();
+            const key = document.getElementById('cfgKey').value.trim();
+            const msgEl = document.getElementById('cfgMsg');
+
+            if (!url || !key) {
+                alert('กรุณากรอกทั้ง SUPABASE_URL และ SUPABASE_ANON_KEY');
+                return;
+            }
+
+            window.bookcoolDb.configure(url, key);
+            msgEl.innerText = 'กำลังทดสอบเชื่อมต่อ...';
+
+            await testAndLoadRealSupabase(url, key);
+        }
+
+        // ทดสอบเชื่อมต่อ Supabase จริง
+        async function testAndLoadRealSupabase(url, key) {
+            const badge = document.getElementById('connectionBadge');
+            const msgEl = document.getElementById('cfgMsg');
+            try {
+                const books = await window.bookcoolDb.getBooks();
+                badge.className = 'text-xs px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                badge.innerHTML = '🟢 เชื่อมต่อ Supabase สำเร็จ (อ่านข้อมูลจากตารางจริง)';
+                msgEl.innerText = '✅ บันทึกและเชื่อมต่อสำเร็จ!';
+                currentLoadedBooks = books.length > 0 ? books : fallbackBooks;
+                populateCategoryFilter();
+                renderBooks(currentLoadedBooks);
+            } catch (err) {
+                console.warn('เชื่อมต่อ Supabase ล้มเหลว หรือยังไม่ได้รัน SQL Schema:', err);
+                badge.className = 'text-xs px-2.5 py-1 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30';
+                badge.innerHTML = '🔴 เชื่อมต่อไม่สำเร็จ (แสดงข้อมูล Fallback ชั่วคราว)';
+                msgEl.innerText = 'ข้อผิดพลาด: ' + (err.message || 'ไม่สามารถติดต่อฐานข้อมูลได้');
+                loadMockData();
+            }
+        }
+
+        // โหลด Fallback Mock Data
+        function loadMockData() {
+            currentLoadedBooks = fallbackBooks;
+            populateCategoryFilter();
+            renderBooks(currentLoadedBooks);
+        }
+
+        // สร้างตัวเลือกใน Dropdown หมวดหมู่
+        function populateCategoryFilter() {
+            const catFilter = document.getElementById('catFilter');
+            const categories = [...new Set(currentLoadedBooks.map(b => b.category_name || b.categories?.category_name || 'ทั่วไป'))];
+            
+            catFilter.innerHTML = '<option value="all">📂 ทุกหมวดหมู่</option>' + 
+                categories.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+
+        // ฟังก์ชันกรองและเรนเดอร์หนังสือ
+        function filterAndRenderBooks() {
+            const selectedCat = document.getElementById('catFilter').value;
+            const search = document.getElementById('bookSearch').value.toLowerCase().trim();
+
+            let filtered = currentLoadedBooks.filter(b => {
+                const catName = b.category_name || b.categories?.category_name || '';
+                const matchCat = (selectedCat === 'all' || catName === selectedCat);
+                const matchSearch = (!search || b.title.toLowerCase().includes(search) || b.author_name.toLowerCase().includes(search));
+                return matchCat && matchSearch;
+            });
+
+            renderBooks(filtered);
+        }
+
+        // เรนเดอร์การ์ดหนังสือลงใน Grid
+        function renderBooks(books) {
+            const grid = document.getElementById('booksGrid');
+            if (books.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-12 text-center text-slate-400 bg-slate-800/30 rounded-2xl border border-slate-800">
+                        🔍 ไม่พบหนังสือที่ตรงกับเงื่อนไข
+                    </div>
+                `;
+                return;
+            }
+
+            grid.innerHTML = books.map(book => {
+                const price = parseFloat(book.price) || 0;
+                const cat = book.category_name || book.categories?.category_name || 'ทั่วไป';
+                return `
+                <div class="bg-slate-800/60 border border-slate-700/80 rounded-2xl overflow-hidden hover:border-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/5 transition flex flex-col justify-between group">
+                    <div>
+                        <div class="h-44 bg-slate-900 overflow-hidden relative">
+                            <img src="${book.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400'}" 
+                                 alt="${book.title}" 
+                                 class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+                            <span class="absolute top-2.5 left-2.5 bg-slate-950/80 backdrop-blur text-emerald-400 text-[11px] font-medium px-2 py-0.5 rounded-full border border-slate-700">
+                                ${cat}
+                            </span>
+                        </div>
+                        <div class="p-4 space-y-1">
+                            <h3 class="font-bold text-sm text-white line-clamp-1 group-hover:text-emerald-400 transition" title="${book.title}">
+                                ${book.title}
+                            </h3>
+                            <p class="text-xs text-slate-400">โดย ${book.author_name}</p>
+                            <p class="text-xs text-slate-500 line-clamp-2 pt-1 leading-relaxed">${book.description || ''}</p>
+                        </div>
+                    </div>
+                    <div class="p-4 pt-0">
+                        <div class="flex items-center justify-between pt-3 border-t border-slate-700/60">
+                            <span class="text-base font-extrabold text-emerald-400">฿${price.toFixed(2)}</span>
+                            <span class="text-[11px] text-slate-400 bg-slate-900 px-2 py-1 rounded-lg border border-slate-700">
+                                ID: ${book.ebook_id}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+
+</html>

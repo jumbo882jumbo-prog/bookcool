@@ -1,0 +1,26 @@
+{
+  "name": "bookcool",
+  "version": "1.0.0",
+  "description": "E-Book Store Web Application connected with Supabase",
+  "main": "supabaseClient.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "ebook",
+    "store",
+    "supabase",
+    "bookcool"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.1"
+  },
+  "devDependencies": {
+    "vite": "^6.2.0"
+  }
+}

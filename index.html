@@ -16,6 +16,9 @@
     </style>
     <!-- ระบบจัดการสิทธิ์ผู้ใช้และล็อกอิน -->
     <script src="auth.js"></script>
+    <!-- Supabase JS Client & bookcool Integration SDK -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-browser.js"></script>
 </head>
 
 <body class="bg-gray-50 text-gray-800">
@@ -55,6 +58,12 @@
                 <a href="my-books.html" class="hover:text-blue-400 flex items-center gap-1 transition"
                     title="หนังสือของฉันที่ซื้อแล้ว">
                     📚 หนังสือของฉัน
+                </a>
+
+                <!-- ลิงก์ไปหน้า Supabase Demo & Integration -->
+                <a href="supabase-demo.html" class="bg-emerald-600/30 hover:bg-emerald-600 text-emerald-300 hover:text-white px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 transition border border-emerald-500/30"
+                    title="ทดสอบและเชื่อมต่อ Supabase Database">
+                    ⚡ Supabase
                 </a>
 
                 <!-- ส่วนแสดงสถานะล็อกอินและบัญชีผู้ใช้งาน (Auth Nav Container) -->
@@ -772,11 +781,35 @@
             }
         }
 
-        // เริ่มต้นโหลดหน้าเว็บและดึงข้อมูลหนังสือ
-        function initPage() {
+        // เริ่มต้นโหลดหน้าเว็บและดึงข้อมูลหนังสือ (รองรับทั้ง LocalStorage และ Supabase)
+        async function initPage() {
             allBooks = getStoredBooks();
             renderBooks();
             setupEventListeners();
+
+            // ดึงข้อมูลสดจาก Supabase (หากมีการเชื่อมต่อและเปิดใช้งาน)
+            try {
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    const supaBooks = await window.bookcoolDb.getBooks();
+                    if (Array.isArray(supaBooks) && supaBooks.length > 0) {
+                        allBooks = supaBooks.map(b => ({
+                            id: b.ebook_id,
+                            title: b.title,
+                            author: b.author_name,
+                            price: parseFloat(b.price) || 0,
+                            category: b.category_name || b.categories?.category_name || 'ทั่วไป',
+                            description: b.description || '',
+                            cover: b.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
+                            downloadUrl: b.download_url || '#'
+                        }));
+                        renderBooks();
+                        console.log('⚡ [bookcool] ซิงก์ข้อมูลหนังสือสดจาก Supabase เรียบร้อยแล้ว:', allBooks.length, 'เล่ม');
+                    }
+                }
+            } catch (err) {
+                // ใช้ข้อมูล Fallback LocalStorage เดิมอย่างราบรื่น
+                console.log('ℹ️ [bookcool] รันด้วย Local Database โหมดปกติ');
+            }
 
             // หากมีหนังสือเพิ่งเพิ่มมาใหม่ ให้เลื่อนหน้าจอไปหาการ์ดนั้นทันที
             const urlParams = new URLSearchParams(window.location.search);

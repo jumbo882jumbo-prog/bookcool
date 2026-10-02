@@ -1,0 +1,253 @@
+/**
+ * supabase-browser.js
+ * สำหรับใช้งานบนเว็บ bookcool แบบ Client-Side (Vanilla JS / HTML)
+ * รองรับการโหลดผ่าน CDN: <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+ */
+
+(function (window) {
+    // 1. กำหนดค่าเริ่มต้น หรือดึงจาก localStorage หากผู้ใช้เคยตั้งค่าไว้
+    const defaultUrl = 'https://your-project-id.supabase.co';
+    const defaultKey = 'your-anon-key-here';
+
+    const savedConfig = JSON.parse(localStorage.getItem('bookcool_supabase_config') || '{}');
+    const SUPABASE_URL = savedConfig.url || window.ENV_SUPABASE_URL || defaultUrl;
+    const SUPABASE_ANON_KEY = savedConfig.key || window.ENV_SUPABASE_KEY || defaultKey;
+
+    let client = null;
+
+    // ตรวจสอบว่ามี Supabase CDN หรือไม่
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+        client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true
+            }
+        });
+    }
+
+    // ฟังก์ชันตั้งค่า URL & Key ใหม่ (บันทึกลง LocalStorage สำหรับทดสอบบนเว็บได้ทันที)
+    function configure(url, key) {
+        if (!url || !key) return false;
+        localStorage.setItem('bookcool_supabase_config', JSON.stringify({ url, key }));
+        if (window.supabase && typeof window.supabase.createClient === 'function') {
+            client = window.supabase.createClient(url, key);
+        }
+        return true;
+    }
+
+    // Helper functions สำหรับเชื่อมต่อ 8 ตารางของ bookcool
+    const db = {
+        get client() {
+            if (!client && window.supabase && typeof window.supabase.createClient === 'function') {
+                const cfg = JSON.parse(localStorage.getItem('bookcool_supabase_config') || '{}');
+                client = window.supabase.createClient(cfg.url || defaultUrl, cfg.key || defaultKey);
+            }
+            return client;
+        },
+
+        configure,
+
+        // 1. ดึงข้อมูลหนังสือทั้งหมด พร้อมชื่อหมวดหมู่
+        async getBooks({ categoryId = null, searchQuery = '', sort = 'latest' } = {}) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้ติดตั้งหรือเชื่อมต่อ');
+            
+            let query = this.client
+                .from('ebooks')
+                .select(`
+                    *,
+                    categories (
+                        category_id,
+                        category_name
+                    )
+                `);
+
+            if (categoryId && categoryId !== 'all') {
+                query = query.eq('category_id', categoryId);
+            }
+
+            if (searchQuery.trim()) {
+                query = query.or(`title.ilike.%${searchQuery}%,author_name.ilike.%${searchQuery}%`);
+            }
+
+            if (sort === 'price-low') {
+                query = query.order('price', { ascending: true });
+            } else if (sort === 'price-high') {
+                query = query.order('price', { ascending: false });
+            } else {
+                query = query.order('ebook_id', { ascending: false });
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return data;
+        },
+
+        // 2. ดึงรายละเอียดหนังสือตาม ID
+        async getBookById(id) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('ebooks')
+                .select('*, categories(*)')
+                .eq('ebook_id', id)
+                .single();
+            if (error) throw error;
+            return data;
+        },
+
+        // 3. ดึงหมวดหมู่ทั้งหมด
+        async getCategories() {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('categories')
+                .select('*')
+                .order('category_id', { ascending: true });
+            if (error) throw error;
+            return data;
+        },
+
+        // 4. สร้างคำสั่งซื้อใหม่ (บันทึกลง orders และ order_items)
+        async createOrder({ orderId, userId, customerName, customerEmail, totalAmount, slipUrl = '', items = [] }) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+
+            // บันทึกลงตาราง orders
+            const { data: orderData, error: orderError } = await this.client
+                .from('orders')
+                .insert([{
+                    order_id: orderId,
+                    user_id: userId || null,
+                    customer_name: customerName,
+                    customer_email: customerEmail,
+                    total_amount: totalAmount,
+                    status: 'pending',
+                    slip_url: slipUrl,
+                    order_date: new Date().toISOString()
+                }])
+                .select()
+                .single();
+
+            if (orderError) throw orderError;
+
+            // บันทึกรายการย่อยลงตาราง order_items
+            if (items && items.length > 0) {
+                const orderItems = items.map(item => ({
+                    order_id: orderId,
+                    ebook_id: item.id || item.ebook_id,
+                    book_title: item.title,
+                    price: item.price,
+                    quantity: item.quantity || 1
+                }));
+
+                const { error: itemsError } = await this.client
+                    .from('order_items')
+                    .insert(orderItems);
+
+                if (itemsError) throw itemsError;
+            }
+
+            return orderData;
+        },
+
+        // 5. ดึงรายการคำสั่งซื้อ (สำหรับแอดมินหรือผู้ใช้)
+        async getOrders(userId = null) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            let query = this.client
+                .from('orders')
+                .select('*, order_items(*)')
+                .order('created_at', { ascending: false });
+
+            if (userId) {
+                query = query.eq('user_id', userId);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            return data;
+        },
+
+        // 6. อนุมัติคำสั่งซื้อและปลดล็อกหนังสือเข้า user_library
+        async approveOrder(orderId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+
+            // อัปเดตสถานะ orders เป็น approved
+            const { data: order, error: updateError } = await this.client
+                .from('orders')
+                .update({ status: 'approved' })
+                .eq('order_id', orderId)
+                .select('*, order_items(*)')
+                .single();
+
+            if (updateError) throw updateError;
+
+            // เพิ่มหนังสือลงใน user_library
+            if (order && order.user_id && order.order_items) {
+                const libraryEntries = order.order_items.map(item => ({
+                    user_id: order.user_id,
+                    ebook_id: item.ebook_id,
+                    order_id: orderId,
+                    access_granted_at: new Date().toISOString()
+                }));
+
+                await this.client
+                    .from('user_library')
+                    .upsert(libraryEntries, { onConflict: 'user_id,ebook_id' });
+            }
+
+            return order;
+        },
+
+        // 7. ดึงหนังสือในคลังของผู้ใช้ (my-books)
+        async getUserLibrary(userId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('user_library')
+                .select(`
+                    library_id,
+                    access_granted_at,
+                    ebooks (
+                        ebook_id,
+                        title,
+                        author_name,
+                        cover_image,
+                        download_url,
+                        description
+                    )
+                `)
+                .eq('user_id', userId);
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 8. ดึงรีวิวของหนังสือ
+        async getBookReviews(ebookId) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('book_reviews')
+                .select('*, profiles(username, full_name, avatar_url)')
+                .eq('ebook_id', ebookId)
+                .order('created_at', { ascending: false });
+
+            if (error) throw error;
+            return data;
+        },
+
+        // 9. เพิ่มรีวิว
+        async addReview({ ebookId, userId, rating, comment }) {
+            if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const { data, error } = await this.client
+                .from('book_reviews')
+                .insert([{
+                    ebook_id: ebookId,
+                    user_id: userId,
+                    rating,
+                    comment
+                }])
+                .select();
+
+            if (error) throw error;
+            return data;
+        }
+    };
+
+    window.bookcoolDb = db;
+})(window);
