@@ -391,7 +391,7 @@
                             <tr>
                                 <td class="font-semibold">การปรับแบบข้อมูล</td>
                                 <td>
-                                    ออกแบบตามหลัก <strong>Third Normal Form (3NF)</strong> และอธิบายเหตุผลการทำ Denormalization เล็กน้อย เช่น การเก็บ <span class="badge-sql">book_title</span> และ <span class="badge-sql">price</span> ใน <span class="badge-sql">order_items</span> เพื่อเป็น Price Snapshot ป้องกันยอดขายอดีตเปลี่ยนแปลง
+                                    ออกแบบตามหลัก <strong>Third Normal Form (3NF)</strong> และอธิบายเหตุผลการทำ Denormalization เล็กน้อย เช่น การเก็บ <span class="badge-sql">book_title</span>, <span class="badge-sql">price</span> (Price Snapshot) และ <span class="badge-sql">category_id</span> ใน <span class="badge-sql">order_items</span> เพื่อเป็น Snapshot และช่วยให้การวิเคราะห์ยอดขายแยกตามหมวดหมู่ทำได้รวดเร็วทันทีโดยไม่ต้อง Join ซ้ำซ้อนหลายตาราง
                                 </td>
                             </tr>
                             <tr>

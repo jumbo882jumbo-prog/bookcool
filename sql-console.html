@@ -195,9 +195,9 @@
                     class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
                     👥 <span>รายชื่อผู้ใช้งานและบทบาท (Users)</span>
                 </button>
-                <button onclick="loadPreset('SELECT * FROM ebooks WHERE price >= 350;')"
+                <button onclick="loadPreset('SELECT c.category_name, SUM(i.price * i.quantity) AS total_revenue, SUM(i.quantity) AS total_sold FROM order_items i JOIN categories c ON i.category_id = c.category_id GROUP BY c.category_name ORDER BY total_revenue DESC;')"
                     class="bg-slate-50 hover:bg-blue-50 text-gray-700 hover:text-blue-700 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer flex items-center gap-1">
-                    🏷️ <span>หนังสือราคา ฿350 ขึ้นไป</span>
+                    🏷️ <span>ยอดขายตามหมวดหมู่ (order_items ⟕ categories)</span>
                 </button>
             </div>
         </div>
@@ -294,6 +294,7 @@
                             <div>• item_id <span class="text-gray-400">(INT, PK)</span></div>
                             <div>• order_id <span class="text-gray-400">(VARCHAR, FK)</span></div>
                             <div>• ebook_id <span class="text-gray-400">(INT, FK)</span></div>
+                            <div>• category_id <span class="text-gray-400">(INT, FK)</span></div>
                             <div>• book_title <span class="text-gray-400">(VARCHAR)</span></div>
                             <div>• price <span class="text-gray-400">(DECIMAL)</span></div>
                             <div>• quantity <span class="text-gray-400">(INT)</span></div>

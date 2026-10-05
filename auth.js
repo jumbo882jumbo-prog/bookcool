@@ -415,6 +415,7 @@ const cartManager = {
                 price: priceNum,
                 cover: book.cover || book.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
                 category: book.category || book.category_name || 'ทั่วไป',
+                category_id: book.category_id || null,
                 quantity: 1
             });
         }
@@ -627,6 +628,7 @@ const orderManager = {
         const sanitizedItems = (items || []).map(it => ({
             id: String(it.id || it.ebook_id || '1'),
             ebook_id: String(it.id || it.ebook_id || '1'),
+            category_id: it.category_id || null,
             title: it.title || it.book_title || 'หนังสือสั่งซื้อ',
             author: it.author || it.author_name || 'ไม่ระบุผู้แต่ง',
             price: typeof it.price === 'string' ? (parseFloat(it.price.replace(/[^\d.-]/g, '')) || 0) : (parseFloat(it.price) || 0),

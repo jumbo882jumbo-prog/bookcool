@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS public.order_items (
     item_id BIGSERIAL PRIMARY KEY,
     order_id VARCHAR(50) NOT NULL REFERENCES public.orders(order_id) ON DELETE CASCADE,
     ebook_id BIGINT REFERENCES public.ebooks(ebook_id) ON DELETE RESTRICT,
+    category_id INT REFERENCES public.categories(category_id) ON DELETE SET NULL,
     book_title VARCHAR(255) NOT NULL,
     price NUMERIC(10, 2) NOT NULL,
     quantity INT NOT NULL DEFAULT 1 CHECK (quantity > 0),
@@ -137,6 +138,7 @@ CREATE INDEX IF NOT EXISTS idx_ebooks_title ON public.ebooks(title);
 CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_category ON public.order_items(category_id);
 CREATE INDEX IF NOT EXISTS idx_user_library_user ON public.user_library(user_id);
 CREATE INDEX IF NOT EXISTS idx_book_reviews_ebook ON public.book_reviews(ebook_id);
 CREATE INDEX IF NOT EXISTS idx_cart_items_user ON public.cart_items(user_id);

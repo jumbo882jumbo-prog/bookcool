@@ -581,11 +581,14 @@
 
                 const ebookMap = {};
                 const catBookCount = {};
+                const catIdMap = {};
                 (books || []).forEach(b => {
                     const eid = Number(b.id || b.ebook_id);
                     const catName = b.category_name || (b.categories && b.categories.category_name) || b.category || 'ทั่วไป';
+                    if (b.category_id) catIdMap[b.category_id] = catName;
                     const entry = {
                         id: eid,
+                        category_id: b.category_id || null,
                         title: b.title || 'ไม่ระบุชื่อ',
                         author: b.author_name || b.author || 'นักเขียนคุณภาพ',
                         category: catName,
@@ -619,11 +622,13 @@
                                     rawDate: rawD,
                                     items: (o.order_items || []).map(item => {
                                         const bInfo = ebookMap[Number(item.ebook_id)] || ebookMap[(item.book_title || '').trim()] || {};
+                                        const catName = (item.category_id && catIdMap[item.category_id]) || bInfo.category || 'ทั่วไป';
                                         return {
                                             id: item.ebook_id,
+                                            category_id: item.category_id || bInfo.category_id || null,
                                             title: item.book_title || bInfo.title || 'ไม่ระบุชื่อ',
                                             author: bInfo.author || 'นักเขียนคุณภาพ',
-                                            category: bInfo.category || 'ทั่วไป',
+                                            category: catName,
                                             cover: bInfo.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120',
                                             price: parseFloat(item.price) || bInfo.price || 0,
                                             quantity: parseInt(item.quantity, 10) || 1

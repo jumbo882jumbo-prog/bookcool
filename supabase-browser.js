@@ -305,8 +305,20 @@
 
             if (!orderData) throw new Error('ไม่สามารถบันทึกคำสั่งซื้อลงฐานข้อมูลได้');
 
-            // บันทึกรายการย่อยลงตาราง order_items (คลีนราคาและรหัสหนังสือให้ถูกต้องเสมอ)
+            // บันทึกรายการย่อยลงตาราง order_items (คลีนราคาและรหัสหนังสือให้ถูกต้องเสมอ พร้อมผูก category_id)
             if (items && items.length > 0) {
+                // ค้นหาหมวดหมู่เพื่อ map category_id
+                let catMap = {};
+                try {
+                    const booksData = await this.getBooks();
+                    if (Array.isArray(booksData)) {
+                        booksData.forEach(b => {
+                            if (b.ebook_id) catMap[Number(b.ebook_id)] = b.category_id;
+                            if (b.title) catMap[(b.title).trim()] = b.category_id;
+                        });
+                    }
+                } catch(e) {}
+
                 const orderItems = items.map(item => {
                     // ทำความสะอาดราคา ป้องกัน NaN จากสัญลักษณ์เงิน ฿
                     let priceVal = 0;
@@ -321,13 +333,22 @@
                     let eidNum = parseInt(rawEid, 10);
                     if (isNaN(eidNum) || eidNum <= 0) eidNum = 1;
 
-                    return {
+                    // หา category_id
+                    let catId = item.category_id || catMap[eidNum] || catMap[(item.title || item.book_title || '').trim()] || null;
+
+                    const row = {
                         order_id: finalOrderId,
                         ebook_id: eidNum,
                         book_title: item.title || item.book_title || 'หนังสือสั่งซื้อ',
                         price: priceVal,
                         quantity: parseInt(item.quantity, 10) || 1
                     };
+
+                    if (catId) {
+                        row.category_id = catId;
+                    }
+
+                    return row;
                 });
 
                 try {
@@ -336,7 +357,14 @@
                         .insert(orderItems);
 
                     if (itemsError) {
-                        console.warn('⚠️ บันทึก order_items ใน Supabase แจ้งเตือน:', itemsError.message);
+                        // หากตารางใน Supabase ยังไม่ได้เพิ่มคอลัมน์ category_id ให้ตัดฟิลด์ออกแล้ว insert ซ้ำแบบปลอดภัย
+                        if (itemsError.code === '42703' || String(itemsError.message).includes('category_id')) {
+                            console.warn('ℹ️ ตาราง order_items ใน Supabase ยังไม่ได้เพิ่ม category_id กำลังบันทึกแบบเดิม...');
+                            const fallbackItems = orderItems.map(({ category_id, ...rest }) => rest);
+                            await this.client.from('order_items').insert(fallbackItems);
+                        } else {
+                            console.warn('⚠️ บันทึก order_items ใน Supabase แจ้งเตือน:', itemsError.message);
+                        }
                     }
                 } catch (itErr) {
                     console.warn('⚠️ เกิดข้อผิดพลาดใน order_items:', itErr.message);

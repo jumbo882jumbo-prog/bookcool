@@ -23,34 +23,34 @@ VALUES
 ('ORD-2026-011', 'สมศักดิ์ นิยาย', 'somsak@example.com', 'somsak', 195.00, 'approved', '2026-10-01 21:00:00+07', 'bank_transfer'),
 ('ORD-2026-012', 'อาจารย์ พรชัย', 'pornchai@example.com', 'pornchai', 420.00, 'approved', '2026-10-01 22:00:00+07', 'bank_transfer');
 
--- 3. เพิ่มรายการหนังสือในคำสั่งซื้อ (Order Items) ให้ยอดขายและจำนวนตรงกับหน้าเว็บเป๊ะ
-INSERT INTO public.order_items (order_id, ebook_id, book_title, price, quantity)
+-- 3. เพิ่มรายการหนังสือในคำสั่งซื้อ (Order Items) พร้อมผูก category_id ให้ครบถ้วน
+INSERT INTO public.order_items (order_id, ebook_id, category_id, book_title, price, quantity)
 VALUES 
--- 1. กำเนิดจักรกลนิรันดร์: ขาย 5 เล่ม | ยอด 975.00 | 5 orders
-('ORD-2026-001', 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
-('ORD-2026-009', 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
-('ORD-2026-010', 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
-('ORD-2026-011', 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
-('ORD-2026-007', 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
+-- 1. กำเนิดจักรกลนิรันดร์: ขาย 5 เล่ม | ยอด 975.00 | 5 orders (category_id = 2)
+('ORD-2026-001', 2, 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
+('ORD-2026-009', 2, 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
+('ORD-2026-010', 2, 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
+('ORD-2026-011', 2, 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
+('ORD-2026-007', 2, 2, 'กำเนิดจักรกลนิรันดร์ (Chronicles of Eternity)', 195.00, 1),
 
--- 2. Full-Stack Web Development: ขาย 2 เล่ม | ยอด 840.00 | 2 orders
-('ORD-2026-002', 7, 'Full-Stack Web Development with Python & Modern Stack', 420.00, 1),
-('ORD-2026-012', 7, 'Full-Stack Web Development with Python & Modern Stack', 420.00, 1),
+-- 2. Full-Stack Web Development: ขาย 2 เล่ม | ยอด 840.00 | 2 orders (category_id = 6)
+('ORD-2026-002', 7, 6, 'Full-Stack Web Development with Python & Modern Stack', 420.00, 1),
+('ORD-2026-012', 7, 6, 'Full-Stack Web Development with Python & Modern Stack', 420.00, 1),
 
--- 3. Lean Startup: ขาย 1 เล่ม | ยอด 320.00 | 1 order
-('ORD-2026-003', 1, 'Lean Startup & Product Strategy', 320.00, 1),
+-- 3. Lean Startup: ขาย 1 เล่ม | ยอด 320.00 | 1 order (category_id = 1)
+('ORD-2026-003', 1, 1, 'Lean Startup & Product Strategy', 320.00, 1),
 
--- 4. จิตวิทยาการบริหารเวลา: ขาย 1 เล่ม | ยอด 250.00 | 1 order
-('ORD-2026-004', 5, 'จิตวิทยาการบริหารเวลา Focus & Productivity', 250.00, 1),
+-- 4. จิตวิทยาการบริหารเวลา: ขาย 1 เล่ม | ยอด 250.00 | 1 order (category_id = 4)
+('ORD-2026-004', 5, 4, 'จิตวิทยาการบริหารเวลา Focus & Productivity', 250.00, 1),
 
--- 5. Mastering Database Design & SQL: ขาย 1 เล่ม | ยอด 299.00 | 1 order
-('ORD-2026-005', 8, 'Mastering Database Design & SQL', 299.00, 1),
+-- 5. Mastering Database Design & SQL: ขาย 1 เล่ม | ยอด 299.00 | 1 order (category_id = 6)
+('ORD-2026-005', 8, 6, 'Mastering Database Design & SQL', 299.00, 1),
 
--- 6. จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป: ขาย 1 เล่ม | ยอด 280.00 | 1 order
-('ORD-2026-006', 4, 'จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป', 280.00, 1),
+-- 6. จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป: ขาย 1 เล่ม | ยอด 280.00 | 1 order (category_id = 1)
+('ORD-2026-006', 4, 1, 'จิตวิทยาการเจรจาต่อรองให้ชนะทุกสโคป', 280.00, 1),
 
--- 7. ถอดรหัสวิญญาณแห่งดวงดาว: ขาย 1 เล่ม | ยอด 300.00 | 1 order
-('ORD-2026-007', 2, 'ถอดรหัสวิญญาณแห่งดวงดาว', 300.00, 1),
+-- 7. ถอดรหัสวิญญาณแห่งดวงดาว: ขาย 1 เล่ม | ยอด 300.00 | 1 order (category_id = 2)
+('ORD-2026-007', 2, 2, 'ถอดรหัสวิญญาณแห่งดวงดาว', 300.00, 1),
 
--- 8. Clean Architecture & Design Patterns: ขาย 1 เล่ม | ยอด 450.00 | 1 order
-('ORD-2026-008', 4, 'Clean Architecture & Design Patterns', 450.00, 1);
+-- 8. Clean Architecture & Design Patterns: ขาย 1 เล่ม | ยอด 450.00 | 1 order (category_id = 6)
+('ORD-2026-008', 4, 6, 'Clean Architecture & Design Patterns', 450.00, 1);

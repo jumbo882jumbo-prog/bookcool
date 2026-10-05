@@ -88,6 +88,7 @@
 ```mermaid
 erDiagram
     CATEGORIES ||--o{ EBOOKS : "classifies (1:N)"
+    CATEGORIES ||--o{ ORDER_ITEMS : "categorizes (1:N)"
     PROFILES ||--o{ ORDERS : "places (1:N)"
     PROFILES ||--o{ CART_ITEMS : "has (1:N)"
     PROFILES ||--o{ USER_LIBRARY : "owns (1:N)"
@@ -143,6 +144,7 @@ erDiagram
         bigint item_id PK "รหัสรายการย่อย (BIGSERIAL)"
         string order_id FK "รหัสคำสั่งซื้อ (FK -> orders CASCADE)"
         bigint ebook_id FK "รหัสหนังสือ (FK -> ebooks)"
+        int category_id FK "รหัสหมวดหมู่ (FK -> categories SET NULL)"
         string book_title "ชื่อหนังสือ ณ วันสั่งซื้อ"
         decimal price "ราคาต่อเล่ม ณ วันสั่งซื้อ"
         int quantity "จำนวนเล่ม (CHECK quantity > 0)"
@@ -239,6 +241,7 @@ erDiagram
 | `item_id` | BIGSERIAL | **PK** | NO | AUTO_INCREMENT | รหัสประจำรายการย่อย |
 | `order_id` | VARCHAR(50) | **FK** | NO | REFERENCES orders ON DELETE CASCADE | อ้างอิงคำสั่งซื้อหลัก |
 | `ebook_id` | BIGINT | **FK** | NO | REFERENCES ebooks | อ้างอิงหนังสือที่สั่งซื้อ |
+| `category_id` | INT | **FK** | YES | REFERENCES categories ON DELETE SET NULL | รหัสหมวดหมู่เพื่อเชื่อมต่อและเร่งสปีดรายงานยอดขาย |
 | `book_title` | VARCHAR(255) | - | NO | NOT NULL | ชื่อหนังสือ ณ วันสั่งซื้อ (Snapshot) |
 | `price` | NUMERIC(10,2) | - | NO | CHECK (price >= 0) | ราคาต่อเล่ม ณ วันสั่งซื้อ |
 | `quantity` | INT | - | NO | CHECK (quantity > 0) | จำนวนเล่มที่สั่งซื้อ |
