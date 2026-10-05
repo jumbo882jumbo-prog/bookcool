@@ -86,6 +86,9 @@
             </a>
         </div>
 
+        <!-- ส่วนแสดงคำสั่งซื้อที่รอตรวจสอบสลิป (ยังไม่เข้าคลังหนังสือจนกว่าจะอนุมัติ) -->
+        <div id="pendingOrdersContainer"></div>
+
         <!-- รายการหนังสือที่ซื้อแล้ว (Dynamic Grid Layout) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="myBooksGrid">
             <!-- โหลดรายการหนังสือจาก orderManager ด้วย JavaScript -->
@@ -236,15 +239,18 @@
             const urlParams = new URLSearchParams(window.location.search);
             const newlyCreatedOrderId = urlParams.get('newOrder');
 
-            // จัดการแบนเนอร์แจ้งเตือนคำสั่งซื้อล่าสุด (เฉพาะของ user ปัจจุบัน)
-            const pendingOrders = orders.filter(o => o.status === 'pending');
+            // แยกออเดอร์: approved (เข้าคลังหนังสือ) กับ pending (รอแอดมินตรวจ)
+            const approvedOrders = orders.filter(o => String(o.status).toLowerCase() === 'approved');
+            const pendingOrders = orders.filter(o => !o.status || String(o.status).toLowerCase() === 'pending');
+
+            // 1. จัดการแบนเนอร์แจ้งเตือนคำสั่งซื้อล่าสุด (เฉพาะของ user ปัจจุบัน)
             if (newlyCreatedOrderId || pendingOrders.length > 0) {
                 const targetOrder = orders.find(o => o.id === newlyCreatedOrderId) || pendingOrders[0];
                 if (banner && targetOrder) {
                     banner.classList.remove('hidden');
                     if (bannerText) {
                         const itemsNames = (targetOrder.items || []).map(i => i.title).join(', ');
-                        bannerText.innerHTML = `คำสั่งซื้อ <strong>#${targetOrder.id}</strong> (${itemsNames}) กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะสามารถดาวน์โหลดไฟล์ได้ทันที`;
+                        bannerText.innerHTML = `คำสั่งซื้อ <strong>#${targetOrder.id}</strong> (${itemsNames}) กำลังรอผู้ดูแลระบบตรวจสอบสลิป เมื่อแอดมินอนุมัติแล้วจะย้ายเข้าคลังหนังสือและเปิดให้ดาวน์โหลดทันที`;
                     }
                 } else if (banner) {
                     banner.classList.add('hidden');
@@ -253,12 +259,64 @@
                 if (banner) banner.classList.add('hidden');
             }
 
-            if (!orders || orders.length === 0) {
+            // 2. แสดงรายการคำสั่งซื้อที่รอแอดมินตรวจสอบสลิปใน Container พิเศษ (ไม่ปนกับหนังสือในคลัง)
+            const pendingContainer = document.getElementById('pendingOrdersContainer');
+            if (pendingContainer) {
+                if (pendingOrders.length > 0) {
+                    pendingContainer.innerHTML = `
+                        <div class="mb-8 bg-amber-50/80 border border-amber-200 rounded-2xl p-5 shadow-sm">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3 border-b border-amber-200/80 pb-3">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping"></span>
+                                    <h3 class="font-bold text-amber-900 text-sm">⏳ รายการคำสั่งซื้อที่รอแอดมินตรวจสอบสลิป (${pendingOrders.length} รายการ)</h3>
+                                </div>
+                                <span class="text-xs text-amber-800 bg-amber-100/90 px-3 py-1 rounded-full font-semibold border border-amber-200">
+                                    ⚠️ ยังไม่เข้าคลังหนังสือจนกว่าแอดมินจะกดยืนยัน
+                                </span>
+                            </div>
+                            <p class="text-xs text-amber-800 mb-4 leading-relaxed">
+                                รายการด้านล่างนี้อยู่ในสถานะ <strong>"รอการตรวจสอบ (Pending)"</strong> เมื่อผู้ดูแลระบบตรวจสอบหลักฐานการโอนและกดปุ่ม <strong>"✓ ยืนยันคำสั่งซื้อ"</strong> ในหน้าจัดการระบบแล้ว หนังสือจะถูกย้ายเข้าสู่คลังหนังสือด้านล่างโดยอัตโนมัติ และเปิดให้ดาวน์โหลดไฟล์ทันทีครับ
+                            </p>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${pendingOrders.map(order => {
+                                    return (order.items || []).map(item => `
+                                        <div class="bg-white rounded-xl border border-amber-200/80 p-4 flex gap-4 items-center shadow-2xs">
+                                            <img src="${item.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=150'}"
+                                                alt="${item.title}" class="w-16 h-22 object-cover rounded-lg shadow-2xs flex-shrink-0 opacity-80"
+                                                onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=150'">
+                                            <div class="flex-1 min-w-0">
+                                                <div class="flex items-center justify-between gap-1 mb-1">
+                                                    <span class="text-[11px] font-mono font-bold text-amber-700">#${order.id}</span>
+                                                    <span class="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full font-bold">รอแอดมินอนุมัติ</span>
+                                                </div>
+                                                <h4 class="font-bold text-sm text-gray-900 truncate" title="${item.title}">${item.title}</h4>
+                                                <p class="text-xs text-gray-500 mb-2">จำนวน: ${item.quantity || 1} เล่ม • ฿${(parseFloat(item.price) || 0).toFixed(2)}</p>
+                                                <div class="text-[11px] text-amber-700 bg-amber-50 rounded-lg py-1.5 px-2.5 border border-amber-200/60 flex items-center gap-1.5 font-medium">
+                                                    <span>🔒 ปิดดาวน์โหลดชั่วคราว (รอแอดมินกดยืนยันในหน้า Admin)</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `).join('');
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    pendingContainer.innerHTML = '';
+                }
+            }
+
+            // 3. ตรวจสอบคลังหนังสือ (แสดงเฉพาะรายการที่อนุมัติแล้วเท่านั้น)
+            if (approvedOrders.length === 0) {
                 grid.innerHTML = `
                     <div class="col-span-full bg-white rounded-2xl border border-gray-200 p-12 text-center shadow-sm">
                         <div class="text-5xl mb-3">📚</div>
-                        <h3 class="text-lg font-bold text-gray-800">คุณยังไม่มีหนังสือในคลังหนังสือ</h3>
-                        <p class="text-xs text-gray-500 mt-1 mb-6">สวัสดีคุณ <strong>${currentUser.name || currentUser.username}</strong> คุณยังไม่ได้สั่งซื้อหนังสือใดๆ ในบัญชีนี้</p>
+                        <h3 class="text-lg font-bold text-gray-800">ยังไม่มีหนังสือที่ได้รับการอนุมัติในคลังหนังสือ</h3>
+                        <p class="text-xs text-gray-500 mt-2 mb-6 max-w-md mx-auto">
+                            ${pendingOrders.length > 0 
+                                ? `สวัสดีคุณ <strong>${currentUser.name || currentUser.username}</strong> คุณมีรายการคำสั่งซื้อที่รอแอดมินตรวจสอบอยู่ <strong>${pendingOrders.length} รายการ</strong> (แสดงอยู่ด้านบน) เมื่อแอดมินกดอนุมัติแล้ว หนังสือจะปรากฏในคลังนี้ทันทีครับ` 
+                                : `สวัสดีคุณ <strong>${currentUser.name || currentUser.username}</strong> คุณยังไม่มีหนังสือในคลัง สามารถเลือกดูหนังสือที่สนใจและสั่งซื้อได้เลยครับ`}
+                        </p>
                         <a href="index.html#bookSection" class="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-6 py-3 rounded-xl shadow transition">
                             📖 เลือกซื้อหนังสือหน้าร้าน
                         </a>
@@ -267,51 +325,28 @@
                 return;
             }
 
-            // แตกรายการหนังสือจากแต่ละคำสั่งซื้อ
+            // 4. แตกรายการหนังสือจากคำสั่งซื้อที่อนุมัติแล้ว (Approved) ลงคลังหนังสือ
             let htmlCards = [];
-            orders.forEach(order => {
-                const isApproved = order.status === 'approved';
-                const statusBadge = isApproved
-                    ? `<span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">
-                         ✅ ชำระเงินแล้ว / พร้อมดาวน์โหลด
-                       </span>`
-                    : `<span class="bg-amber-100 text-amber-700 text-xs px-2.5 py-1 rounded-full font-semibold">
-                         ⏳ รอแอดมินตรวจสอบสลิป
-                       </span>`;
-
-                const cardBg = isApproved ? 'bg-white border-gray-200' : 'bg-amber-50/20 border-amber-200';
-
+            approvedOrders.forEach(order => {
                 (order.items || []).forEach(item => {
-                    const downloadBtn = isApproved
-                        ? `<button onclick="downloadBook('${item.title}', 'PDF / EPUB')"
-                                class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
-                                📥 ดาวน์โหลด E-Book (PDF / EPUB)
-                           </button>`
-                        : `<button disabled
-                                class="w-full bg-gray-200 text-gray-400 text-xs font-semibold py-2.5 px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2">
-                                🔒 ยังไม่เปิดให้ดาวน์โหลด (รอแอดมินอนุมัติ)
-                           </button>`;
-
-                    const pendingNote = !isApproved ? `
-                        <p class="text-xs text-amber-600 mb-3 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                            💡 กำลังตรวจสอบยอดเงิน เมื่อแอดมินกดยืนยัน ปุ่มดาวน์โหลดจะเปิดใช้งานอัตโนมัติ
-                        </p>
-                    ` : '';
-
                     htmlCards.push(`
-                    <div class="${cardBg} rounded-2xl border p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center">
-                        <img src="${item.cover}"
+                    <div class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition flex flex-col sm:flex-row gap-5 items-center">
+                        <img src="${item.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=250'}"
                             alt="${item.title}" class="w-28 h-36 object-cover rounded-xl shadow flex-shrink-0"
                             onerror="this.src='https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=250'">
                         <div class="flex-1 w-full">
                             <div class="flex items-center justify-between mb-2">
-                                ${statusBadge}
-                                <span class="text-xs font-mono ${isApproved ? 'text-gray-400' : 'text-amber-600 font-medium'}">#${order.id}</span>
+                                <span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">
+                                    ✅ ชำระเงินแล้ว / พร้อมดาวน์โหลด
+                                </span>
+                                <span class="text-xs font-mono text-gray-400 font-medium">#${order.id}</span>
                             </div>
                             <h3 class="font-bold text-base text-gray-900 mb-1">${item.title}</h3>
-                            <p class="text-xs text-gray-500 mb-3">ผู้แต่ง: ${item.author || 'ไม่ระบุ'} • ยอดเงิน: ฿${(parseFloat(item.price) || 0).toFixed(2)}</p>
-                            ${pendingNote}
-                            ${downloadBtn}
+                            <p class="text-xs text-gray-500 mb-4">ผู้แต่ง: ${item.author || 'ไม่ระบุ'} • จำนวน: ${item.quantity || 1} เล่ม</p>
+                            <button onclick="downloadBook('${item.title}', 'PDF / EPUB')"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition flex items-center justify-center gap-2 shadow-sm cursor-pointer">
+                                📥 ดาวน์โหลด E-Book (PDF / EPUB)
+                            </button>
                         </div>
                     </div>`);
                 });

@@ -59,7 +59,13 @@
                     💻 <span>คำสั่ง SQL</span>
                 </a>
 
-                <!-- เมนู 4: ไปที่หน้าร้าน -->
+                <!-- เมนู 4: เล่มรายงานโครงงาน -->
+                <a href="project-report.html" target="_blank"
+                    class="text-indigo-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-gray-800 transition flex items-center gap-1.5 font-medium">
+                    📄 <span>เล่มรายงาน</span>
+                </a>
+
+                <!-- เมนู 5: ไปที่หน้าร้าน -->
                 <a href="index.html"
                     class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-3 py-1.5 rounded-lg border border-gray-700 transition flex items-center gap-1.5">
                     🌐 <span class="hidden sm:inline">หน้าร้านค้า</span>
@@ -682,21 +688,12 @@
                             }));
                         }
 
-                        // ซิงก์ Local Orders / Items ที่ยังไม่มีใน Supabase เข้ามาป้องกันข้อมูลตกหล่น
-                        const orderIdSet = new Set(sqlOrders.map(o => o.order_id));
-                        local.sqlOrders.forEach(lo => {
-                            if (!orderIdSet.has(lo.order_id)) {
-                                sqlOrders.push(lo);
-                                orderIdSet.add(lo.order_id);
-                            }
-                        });
-                        const itemIdSet = new Set(sqlOrderItems.map(it => `${it.order_id}_${it.ebook_id}`));
-                        local.sqlOrderItems.forEach(li => {
-                            if (!itemIdSet.has(`${li.order_id}_${li.ebook_id}`)) {
-                                sqlOrderItems.push(li);
-                                itemIdSet.add(`${li.order_id}_${li.ebook_id}`);
-                            }
-                        });
+                        // เมื่อเชื่อมต่อ Supabase สำเร็จ ให้ใช้ข้อมูลจาก Supabase เป็นหลัก 100%
+                        if (supaOrders && supaOrders.length > 0) {
+                            try {
+                                localStorage.setItem('orders_list', JSON.stringify(sqlOrders));
+                            } catch (e) {}
+                        }
 
                         const catCountMap = {};
                         sqlBooks.forEach(b => {
@@ -742,40 +739,45 @@
             }
         }
 
-        // ฟังก์ชันเลือกคำสั่งด่วนสำหรับ 4 รายงานวิเคราะห์หลัก
+        // ฟังก์ชันเลือกคำสั่งด่วนสำหรับ 4 รายงานวิเคราะห์หลัก (เฉพาะออเดอร์ที่ได้รับการอนุมัติแล้ว approved)
         const reportQueries = {
-            1: `-- 1. รายงานยอดขายตามช่วงเวลา (Sales over Time)
+            1: `-- 1. รายงานยอดขายตามช่วงเวลา (Sales over Time - เฉพาะออเดอร์ที่อนุมัติแล้ว)
 SELECT 
     SUBSTRING(order_date, 1, 10) AS sale_date,
     COUNT(order_id) AS total_orders,
     SUM(total_amount) AS total_sales,
     ROUND(AVG(total_amount), 2) AS avg_aov
 FROM orders
+WHERE status = 'approved'
 GROUP BY SUBSTRING(order_date, 1, 10)
 ORDER BY sale_date DESC;`,
 
-            2: `-- 2. รายงาน E-Book ขายดีอันดับ 1-10 (Top Selling E-Books)
+            2: `-- 2. รายงาน E-Book ขายดีอันดับ 1-10 (Top Selling E-Books - เฉพาะออเดอร์ที่อนุมัติแล้ว)
 SELECT 
-    book_title,
-    SUM(quantity) AS total_sold_qty,
-    SUM(price * quantity) AS total_revenue,
-    COUNT(DISTINCT order_id) AS orders_count
-FROM order_items
-GROUP BY book_title
+    i.book_title,
+    SUM(i.quantity) AS total_sold_qty,
+    SUM(i.price * i.quantity) AS total_revenue,
+    COUNT(DISTINCT i.order_id) AS orders_count
+FROM order_items i
+JOIN orders o ON i.order_id = o.order_id
+WHERE o.status = 'approved'
+GROUP BY i.book_title
 ORDER BY total_sold_qty DESC;`,
 
-            3: `-- 3. รายงานยอดขายตามหมวดหมู่ (Sales by Category)
+            3: `-- 3. รายงานยอดขายตามหมวดหมู่ (Sales by Category - เฉพาะออเดอร์ที่อนุมัติแล้ว)
 SELECT 
     b.category_name,
     COUNT(DISTINCT i.order_id) AS total_orders,
     SUM(i.quantity) AS books_sold_qty,
     SUM(i.price * i.quantity) AS category_revenue
 FROM order_items i
+JOIN orders o ON i.order_id = o.order_id
 JOIN ebooks b ON i.ebook_id = b.ebook_id
+WHERE o.status = 'approved'
 GROUP BY b.category_name
 ORDER BY category_revenue DESC;`,
 
-            4: `-- 4. รายงานลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)
+            4: `-- 4. รายงานลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty - เฉพาะยอดซื้อที่อนุมัติแล้ว)
 SELECT 
     customer_name,
     customer_email,
@@ -783,6 +785,7 @@ SELECT
     SUM(total_amount) AS total_spent,
     MAX(order_date) AS latest_order_date
 FROM orders
+WHERE status = 'approved'
 GROUP BY customer_name, customer_email
 ORDER BY total_spent DESC;`
         };

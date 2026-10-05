@@ -105,6 +105,10 @@
                     class="bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
                     📥 <span>ส่งออก CSV/Excel</span>
                 </button>
+                <a href="project-report.html" target="_blank"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-sm">
+                    📄 <span>พิมพ์เล่มรายงาน (Report)</span>
+                </a>
                 <a href="admin.html"
                     class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-semibold transition shadow-sm">
                     ← กลับหน้าจัดการคำสั่งซื้อ
@@ -300,7 +304,7 @@
                 <div class="flex items-center gap-2">
                     <span
                         class="text-xs bg-amber-50 text-amber-700 px-3 py-1 rounded-lg border border-amber-200 font-mono">
-                        SQL: JOIN + GROUP BY ebook_id + SUM(qty) + ORDER BY DESC LIMIT 5
+                        SQL: JOIN orders + order_items + WHERE o.status = 'approved' + GROUP BY ebook_id + SUM(qty)
                     </span>
                 </div>
             </div>
@@ -634,37 +638,27 @@
                     }
                 }
 
-                // 3. ดึงคำสั่งซื้อจาก LocalStorage และ Merge ร่วมกันอย่างแม่นยำ
-                let localOrders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
-                const orderMap = new Map();
-                remoteOrders.forEach(o => {
-                    orderMap.set(o.id, o);
-                });
-                localOrders.forEach(o => {
-                    if (!orderMap.has(o.id)) {
-                        (o.items || []).forEach(it => {
-                            const bInfo = ebookMap[Number(it.id || it.ebook_id)] || ebookMap[(it.title || '').trim()] || {};
-                            if (!it.category || it.category === 'ทั่วไป') it.category = bInfo.category || it.category || 'ทั่วไป';
-                            if (!it.cover) it.cover = bInfo.cover || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=120';
-                            if (!it.author) it.author = bInfo.author || 'นักเขียนคุณภาพ';
-                        });
-                        orderMap.set(o.id, o);
-                    } else {
-                        const existing = orderMap.get(o.id);
-                        if (String(o.status).toLowerCase() === 'pending') {
-                            existing.status = 'pending';
-                        }
-                        if (o.slipImage && !existing.slipImage) {
-                            existing.slipImage = o.slipImage;
-                        }
-                        if ((!existing.items || existing.items.length === 0) && (o.items && o.items.length > 0)) {
-                            existing.items = o.items;
-                        }
-                    }
-                });
+                // 3. จัดการคำสั่งซื้อ: หากเชื่อมต่อ Supabase ได้ ให้ใช้ข้อมูลจาก Supabase เป็นหลัก 100%
+                let orders = [];
+                if (isSupabaseConnected && remoteOrders.length > 0) {
+                    // ใช้ข้อมูลสดจาก Supabase 100% เพื่อให้ตรงกับ Supabase SQL Editor เป๊ะ
+                    orders = remoteOrders;
+                    try {
+                        // ซิงก์กลับไปเก็บใน localStorage เพื่อให้หน้าอื่นๆ สอดคล้องกัน
+                        localStorage.setItem('orders_list', JSON.stringify(remoteOrders));
+                    } catch (e) {}
+                } else {
+                    // โหมดออฟไลน์: ใช้ข้อมูลจาก LocalStorage
+                    let localOrders = (typeof orderManager !== 'undefined') ? orderManager.getOrders() : [];
+                    orders = localOrders;
+                }
 
-                let orders = Array.from(orderMap.values());
                 currentLiveOrders = orders;
+
+                // 4. คำนวณ KPI ภาพรวม (เน้นยอดขายที่ผ่านการยืนยัน Approved แล้ว)
+                const totalOrdersCount = orders.length;
+                const approvedOrders = orders.filter(o => String(o.status).toLowerCase() === 'approved');
+                const pendingOrders = orders.filter(o => !o.status || String(o.status).toLowerCase() === 'pending');
 
                 // อัปเดตข้อความ Badge แสดงสถานะ Realtime บนหัวข้อ
                 const realtimeBadge = document.getElementById('liveRealtimeBadge');
@@ -672,27 +666,24 @@
                     if (isSupabaseConnected) {
                         realtimeBadge.innerHTML = `
                             <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span>⚡ เชื่อมต่อ Supabase Realtime สด (${orders.length} คำสั่งซื้อ)</span>
+                            <span>⚡ เชื่อมต่อ Supabase Realtime (อนุมัติแล้ว ${approvedOrders.length} / รอตรวจ ${pendingOrders.length} คำสั่งซื้อ)</span>
                         `;
                     } else {
                         realtimeBadge.innerHTML = `
                             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                            <span>⚡ เรียลไทม์ (${orders.length} คำสั่งซื้อ)</span>
+                            <span>⚡ เรียลไทม์ (อนุมัติแล้ว ${approvedOrders.length} / รอตรวจ ${pendingOrders.length} คำสั่งซื้อ)</span>
                         `;
                     }
                 }
-
-                // 4. คำนวณ KPI ภาพรวม
-                const totalOrdersCount = orders.length;
-                const approvedOrders = orders.filter(o => String(o.status).toLowerCase() === 'approved');
-                const pendingOrders = orders.filter(o => !o.status || String(o.status).toLowerCase() === 'pending');
                 
-                const totalRevenue = orders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+                // ยอดขายจริง (Revenue) นับเฉพาะออเดอร์ที่แอดมินยืนยันแล้วเท่านั้น
                 const approvedRevenue = approvedOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
-                const aov = totalOrdersCount > 0 ? (totalRevenue / totalOrdersCount) : 0;
+                const pendingRevenue = pendingOrders.reduce((sum, o) => sum + (parseFloat(o.total) || 0), 0);
+                const totalRevenue = approvedRevenue; // ยอดขายสุทธิที่ยืนยันแล้ว
+                const aov = approvedOrders.length > 0 ? (approvedRevenue / approvedOrders.length) : 0;
 
                 const customerMap = {};
-                orders.forEach(o => {
+                approvedOrders.forEach(o => {
                     const key = (o.customerEmail || o.customerUsername || o.customerName || 'guest').toLowerCase();
                     if (!customerMap[key]) {
                         customerMap[key] = {
@@ -700,31 +691,35 @@
                             email: o.customerEmail || '-',
                             orders: 0,
                             approved: 0,
-                            pending: 0,
                             totalSpent: 0,
                             lastDate: o.date || '-'
                         };
                     }
                     customerMap[key].orders += 1;
-                    if (String(o.status).toLowerCase() === 'approved') customerMap[key].approved += 1;
-                    else customerMap[key].pending += 1;
+                    customerMap[key].approved += 1;
                     customerMap[key].totalSpent += (parseFloat(o.total) || 0);
                     if (o.date) customerMap[key].lastDate = o.date;
                 });
 
                 const uniqueCustomers = Object.keys(customerMap).length;
-                const repeatCustomers = Object.values(customerMap).filter(c => c.orders > 1).length;
+                const repeatCustomers = Object.values(customerMap).filter(c => c.approved > 1).length;
 
                 // อัปเดตการ์ด KPI
                 const elRev = document.getElementById('kpiRevenue');
                 if (elRev) elRev.innerText = `฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 const elRevSub = document.getElementById('kpiRevenueSub');
-                if (elRevSub) elRevSub.innerText = `จากคำสั่งซื้อจริง (อนุมัติแล้ว ฿${approvedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })})`;
+                if (elRevSub) {
+                    if (pendingOrders.length > 0) {
+                        elRevSub.innerHTML = `<span>✓ ยืนยันแล้ว ฿${approvedRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span> <span class="text-amber-500 font-semibold">• รอตรวจ ${pendingOrders.length} รายการ (฿${pendingRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })})</span>`;
+                    } else {
+                        elRevSub.innerText = `ยอดขายที่อนุมัติชำระเงินแล้วทั้งหมด (${approvedOrders.length} รายการ)`;
+                    }
+                }
 
                 const elOrders = document.getElementById('kpiOrders');
-                if (elOrders) elOrders.innerText = `${totalOrdersCount} รายการ`;
+                if (elOrders) elOrders.innerText = `${approvedOrders.length} รายการ`;
                 const elOrderStatus = document.getElementById('kpiOrdersStatus');
-                if (elOrderStatus) elOrderStatus.innerHTML = `<span>✓ ชำระแล้ว ${approvedOrders.length}</span> <span class="text-amber-500">• รอตรวจสอบ ${pendingOrders.length}</span>`;
+                if (elOrderStatus) elOrderStatus.innerHTML = `<span>✓ อนุมัติแล้ว ${approvedOrders.length}</span> <span class="text-amber-500 font-semibold">• รอตรวจ ${pendingOrders.length}</span>`;
 
                 const elAOV = document.getElementById('kpiAOV');
                 if (elAOV) elAOV.innerText = `฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -734,9 +729,9 @@
                 const elCustSub = document.getElementById('kpiCustomersSub');
                 if (elCustSub) elCustSub.innerHTML = `<span>⭐ ซื้อซ้ำ ${repeatCustomers} บัญชี (${uniqueCustomers > 0 ? Math.round((repeatCustomers / uniqueCustomers) * 100) : 0}%)</span>`;
 
-                // 5. รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales by Time Period)
+                // 5. รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales by Time Period) - เฉพาะออเดอร์ที่ได้รับการอนุมัติแล้ว
                 const dateMap = {};
-                orders.forEach(o => {
+                approvedOrders.forEach(o => {
                     const rawStr = String(o.order_date || o.date || '2026-10-01');
                     const d = rawStr.substring(0, 10);
                     if (!dateMap[d]) {
@@ -753,7 +748,7 @@
                 const dateTableBody = document.getElementById('tableSalesByDate');
                 if (dateTableBody) {
                     if (sortedDates.length === 0) {
-                        dateTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลคำสั่งซื้อในระบบ</td></tr>`;
+                        dateTableBody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-gray-400">ยังไม่มีข้อมูลคำสั่งซื้อที่ได้รับการอนุมัติในระบบ</td></tr>`;
                     } else {
                         let totalQtyAll = 0;
                         dateTableBody.innerHTML = sortedDates.map(d => {
@@ -768,7 +763,7 @@
                                 <td class="p-3.5 text-right font-bold text-blue-600">฿${item.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 <td class="p-3.5 text-right text-gray-600">฿${dayAov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 <td class="p-3.5 text-center">
-                                    <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">เรียลไทม์</span>
+                                    <span class="bg-green-100 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">อนุมัติแล้ว</span>
                                 </td>
                             </tr>`;
                         }).join('');
@@ -777,12 +772,12 @@
                         if (foot) {
                             foot.innerHTML = `
                             <tr class="bg-slate-100 font-bold text-gray-900 text-xs sm:text-sm">
-                                <td class="p-3.5">รวมผลประกอบการสะสม</td>
-                                <td class="p-3.5 text-center text-blue-600">${totalOrdersCount} คำสั่งซื้อ</td>
+                                <td class="p-3.5">รวมผลประกอบการสะสม (อนุมัติแล้ว)</td>
+                                <td class="p-3.5 text-center text-blue-600">${approvedOrders.length} คำสั่งซื้อ</td>
                                 <td class="p-3.5 text-center text-blue-600">${totalQtyAll} เล่ม</td>
                                 <td class="p-3.5 text-right text-blue-700 font-bold">฿${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 <td class="p-3.5 text-right text-blue-700">฿${aov.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                                <td class="p-3.5 text-center text-emerald-600">100% เรียลไทม์</td>
+                                <td class="p-3.5 text-center text-emerald-600">✓ เฉพาะ Approved</td>
                             </tr>`;
                         }
                     }
@@ -797,9 +792,9 @@
                     salesChartInstance.update('none');
                 }
 
-                // 6. รายงานที่ 2: E-Book ขายดี (Top Selling Books)
+                // 6. รายงานที่ 2: E-Book ขายดี (Top Selling Books) - เฉพาะออเดอร์ที่ได้รับการอนุมัติแล้ว
                 const bookSalesMap = {};
-                orders.forEach(o => {
+                approvedOrders.forEach(o => {
                     (o.items || []).forEach(it => {
                         const title = it.title || 'ไม่ระบุชื่อ';
                         if (!bookSalesMap[title]) {
@@ -823,7 +818,7 @@
                 const topBooksBody = document.getElementById('tableTopBooks');
                 if (topBooksBody) {
                     if (sortedBooks.length === 0) {
-                        topBooksBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการซื้อ E-Book</td></tr>`;
+                        topBooksBody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-gray-400">ยังไม่มีประวัติการซื้อ E-Book ที่ได้รับการอนุมัติ</td></tr>`;
                     } else {
                         const rankBadges = ['🥇 1', '🥈 2', '🥉 3'];
                         topBooksBody.innerHTML = sortedBooks.slice(0, 10).map((b, idx) => {
@@ -864,9 +859,9 @@
                     }
                 }
 
-                // 7. รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category)
+                // 7. รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category) - เฉพาะออเดอร์ที่ได้รับการอนุมัติแล้ว
                 const catMap = {};
-                orders.forEach(o => {
+                approvedOrders.forEach(o => {
                     (o.items || []).forEach(it => {
                         const cat = it.category || 'ทั่วไป';
                         if (!catMap[cat]) {
@@ -959,9 +954,8 @@
                                 </td>
                                 <td class="p-3.5 text-center">${tierBadge}</td>
                                 <td class="p-3.5 text-center font-bold text-gray-900">${cust.orders} ครั้ง</td>
-                                <td class="p-3.5 text-center space-x-1">
-                                    <span class="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded font-medium">สำเร็จ ${cust.approved}</span>
-                                    ${cust.pending > 0 ? `<span class="bg-amber-100 text-amber-700 text-xs px-2 py-0.5 rounded font-medium">รอสลิป ${cust.pending}</span>` : ''}
+                                <td class="p-3.5 text-center">
+                                    <span class="bg-green-100 text-green-700 text-xs px-2.5 py-1 rounded-full font-semibold">✓ อนุมัติแล้ว ${cust.approved} ครั้ง</span>
                                 </td>
                                 <td class="p-3.5 text-right font-bold text-blue-600 text-base">฿${cust.totalSpent.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                                 <td class="p-3.5 text-center text-gray-500">${cust.lastDate}</td>

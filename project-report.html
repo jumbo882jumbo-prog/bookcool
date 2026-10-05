@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบงาน Mini Project Database ร้านขาย E Book - Bookcool</title>
+    <!-- Google Fonts: Sarabun & Prompt & Fira Code -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Prompt', sans-serif;
+            color: #1e293b;
+            background-color: #f1f5f9;
+        }
+
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .font-code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Paper sheet simulation */
+        .paper-sheet {
+            background: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            padding: 2.5rem 3rem;
+            border: 1px solid #e2e8f0;
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: #ffffff;
+                color: #000000;
+                font-size: 11pt;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .paper-sheet {
+                box-shadow: none;
+                border: none;
+                padding: 0;
+                margin-bottom: 2rem;
+                page-break-after: always;
+            }
+
+            .page-break {
+                page-break-after: always;
+            }
+
+            pre, code {
+                white-space: pre-wrap !important;
+                word-break: break-all;
+            }
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 8px 12px;
+            font-size: 0.925rem;
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            font-family: 'Prompt', sans-serif;
+        }
+
+        .badge-sql {
+            background-color: #e0e7ff;
+            color: #3730a3;
+            font-family: 'Fira Code', monospace;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+    </style>
+</head>
+
+<body class="py-6 px-3 sm:px-6 md:px-12">
+
+    <!-- แถบเครื่องมือควบคุมด้านบน (ซ่อนเมื่อพิมพ์) -->
+    <div class="no-print max-w-5xl mx-auto mb-6 bg-slate-900 text-white p-4 rounded-2xl shadow-lg flex flex-wrap items-center justify-between gap-4 sticky top-4 z-50">
+        <div class="flex items-center gap-3">
+            <span class="bg-blue-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">ใบงานระบบฐานข้อมูล</span>
+            <span class="font-heading font-semibold text-sm sm:text-base">รายงานโครงงาน Mini Project: ร้านขาย E-Book (Bookcool)</span>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap text-xs font-heading">
+            <button onclick="window.print()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-sm">
+                🖨️ <span>พิมพ์รายงาน / บันทึกเป็น PDF</span>
+            </button>
+            <a href="index.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl transition">
+                🌐 หน้าร้านค้า
+            </a>
+            <a href="admin.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl transition">
+                📋 จัดการคำสั่งซื้อ
+            </a>
+            <a href="reports.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl transition">
+                📊 รายงานวิเคราะห์
+            </a>
+            <a href="sql-console.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-xl transition">
+                💻 SQL Console
+            </a>
+        </div>
+    </div>
+
+    <!-- เอกสารรายงานหลัก (Printable Container) -->
+    <div class="max-w-5xl mx-auto">
+
+        <!-- ================= PAGE 1 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 1</div>
+
+            <div class="text-center border-b border-slate-200 pb-5 mb-6">
+                <div class="inline-block bg-blue-50 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full mb-2 font-heading">
+                    เอกสารประกอบการส่งงาน Mini Project
+                </div>
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 font-heading">
+                    ใบงาน Mini Project Database ร้านขาย E Book
+                </h1>
+                <p class="text-sm sm:text-base text-slate-600 mt-2 font-heading">
+                    โครงงานกลุ่มละ 2 คน สำหรับประยุกต์ใช้การออกแบบและพัฒนาฐานข้อมูล
+                </p>
+            </div>
+
+            <div class="bg-blue-50/50 border border-blue-100 rounded-xl p-4 mb-6 text-sm leading-relaxed">
+                <p class="font-medium text-slate-800">
+                    พัฒนาระบบร้านขาย E Book ที่ลูกค้าค้นหา เลือกซื้อ ชำระเงินแบบจำลอง และรับลิงก์ดาวน์โหลดได้ พร้อมส่วนบริหารจัดการร้านและรายงานวิเคราะห์จากข้อมูลในระบบจริง
+                </p>
+            </div>
+
+            <div class="mb-6">
+                <h3 class="font-heading font-bold text-base text-slate-900 mb-2">สิ่งที่นักศึกษาต้องแสดง:</h3>
+                <ul class="list-disc list-inside space-y-1.5 text-sm text-slate-700 ml-2">
+                    <li><strong>ออกแบบฐานข้อมูลที่สัมพันธ์กับกระบวนการขายอย่างถูกต้องและอธิบายได้:</strong> ออกแบบ ERD 8 ตาราง พร้อมความสัมพันธ์ PK/FK และปรับให้อยู่ใน 3NF</li>
+                    <li><strong>พัฒนาระบบหรือ prototype ที่สาธิตเส้นทางลูกค้าและผู้ดูแลร้านได้:</strong> มีระบบหน้าร้าน ตะกร้า สั่งซื้อ แนบสลิป ตรวจสอบอนุมัติ และคลังดาวน์โหลด</li>
+                    <li><strong>เขียน SQL และรายงานวิเคราะห์จากข้อมูลตัวอย่างที่กลุ่มบันทึกเอง:</strong> มีรายงาน 4 ด้านหลัก สรุปจากข้อมูลจริงกว่า 35 คำสั่งซื้อ</li>
+                    <li><strong>ใช้ AI ได้อย่างมีความรับผิดชอบและเปิดเผยสิ่งที่นำมาใช้:</strong> มีบันทึก Prompt และวิธีการตรวจสอบผลลัพธ์ของสมาชิกกลุ่ม</li>
+                </ul>
+            </div>
+
+            <!-- ตารางข้อมูลกลุ่ม -->
+            <div class="mb-6">
+                <h3 class="font-heading font-bold text-base text-slate-900 mb-2">ข้อมูลกลุ่ม (Group Information)</h3>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-800 text-white">
+                                <th class="w-1/4 text-left py-2.5 px-3">รายการ</th>
+                                <th class="w-3/4 text-left py-2.5 px-3">รายละเอียด</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="font-semibold bg-slate-50">รายวิชาและตอนเรียน</td>
+                                <td>Database Systems & Design Mini Project (ตอนเรียนที่ 1)</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold bg-slate-50">ชื่อโครงงาน</td>
+                                <td class="font-bold text-blue-900">
+                                    Bookcool: ระบบร้านค้าหนังสือดิจิทัลและศูนย์วิเคราะห์ข้อมูลคำสั่งซื้อ<br>
+                                    <span class="text-xs font-normal text-slate-500">(E-Book Store Management & Database Analytics Studio)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold bg-slate-50">สมาชิกคนที่ 1</td>
+                                <td>
+                                    ชื่อ: ................................................................ รหัส: ....................................<br>
+                                    <span class="text-xs text-slate-500">บทบาท: Database Architect & Backend Engine (ออกแบบโครงสร้าง ERD, 3NF, SQL Queries)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold bg-slate-50">สมาชิกคนที่ 2</td>
+                                <td>
+                                    ชื่อ: ................................................................ รหัส: ....................................<br>
+                                    <span class="text-xs text-slate-500">บทบาท: Frontend Developer & Data Analyst (พัฒนาระบบหน้าร้าน-หลังบ้าน, Realtime Sync, QA Testing)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold bg-slate-50">เครื่องมือที่ใช้</td>
+                                <td class="text-xs leading-relaxed">
+                                    <strong>ภาษา:</strong> HTML5, CSS3 (Tailwind CSS CDN & Vanilla CSS), Modern JavaScript (ES6+), SQL (PostgreSQL)<br>
+                                    <strong>เฟรมเวิร์ก/ไลบรารี:</strong> Chart.js (Data Visualization), AlaSQL (In-Memory SQL Database Engine)<br>
+                                    <strong>DBMS:</strong> PostgreSQL 15 (Supabase Cloud Database & In-Memory AlaSQL Engine)<br>
+                                    <strong>บริการที่เกี่ยวข้อง:</strong> Supabase Database, Auth (RBAC), Storage, Supabase Realtime Channels
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-amber-50 border-l-4 border-amber-500 p-3 rounded-r-xl text-xs text-amber-900">
+                <strong>คำแนะนำก่อนเริ่มงาน:</strong> เลือกขอบเขตที่กลุ่มพัฒนาและสาธิตได้จริง ใช้ข้อมูลตัวอย่างที่สมเหตุสมผล และเก็บหลักฐานการทำงานไว้สำหรับการนำเสนอ
+            </div>
+        </section>
+
+        <!-- ================= PAGE 2 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 2</div>
+
+            <!-- 1. สถานการณ์โจทย์ -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                    สถานการณ์โจทย์ (Problem Scenario)
+                </h2>
+                <div class="text-sm leading-relaxed text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <p class="mb-2">
+                        ร้าน E Book ต้องการระบบสำหรับขายหนังสือดิจิทัล ลูกค้าสมัครสมาชิก ค้นหา E Book เลือกใส่ตะกร้า สั่งซื้อ และชำระเงินแบบจำลองได้ เมื่อผู้ดูแลยืนยันคำสั่งซื้อ ระบบต้องแสดงหรือส่งลิงก์ดาวน์โหลดของรายการที่ซื้อ ผู้ดูแลต้องติดตามการขายและวิเคราะห์แนวโน้มจากข้อมูลในฐานข้อมูลได้
+                    </p>
+                    <p class="text-slate-600 text-xs">
+                        <strong>การประยุกต์ใช้ในโครงงาน Bookcool:</strong> ระบบถูกพัฒนาขึ้นเพื่อตอบโจทย์กระบวนการขาย E-Book แบบไร้รอยต่อ โดยมีระบบตะกร้าและคำสั่งซื้อที่ผูกกับตาราง <span class="badge-sql">orders</span> และ <span class="badge-sql">order_items</span> พร้อมระบบสลิปจำลอง และการรักษาความปลอดภัยของลิงก์ดาวน์โหลดที่จะถูกปลดล็อกเฉพาะเมื่อแอดมินกดอนุมัติ (<span class="badge-sql">status = 'approved'</span>) เท่านั้น
+                    </p>
+                </div>
+            </div>
+
+            <!-- 2. ขอบเขตงานขั้นต่ำ -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">2</span>
+                    ขอบเขตงานขั้นต่ำ
+                </h2>
+
+                <h3 class="font-heading font-semibold text-sm text-slate-800 mb-2">2.1 ส่วนหน้าร้าน (ผู้ใช้งาน)</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">หัวข้อ</th>
+                                <th class="w-1/2 text-left">ความสามารถขั้นต่ำที่ต้องสาธิต</th>
+                                <th class="w-1/4 text-left">หน้าจอที่รองรับในโปรเจกต์</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">สมาชิก</td>
+                                <td>สมัครสมาชิก เข้าสู่ระบบ แก้ไขข้อมูลพื้นฐาน และดูประวัติคำสั่งซื้อ</td>
+                                <td><span class="badge-sql">login.html</span>, <span class="badge-sql">auth.js</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">รายการ E Book</td>
+                                <td>แสดงชื่อ ผู้แต่ง ราคา หมวดหมู่ คำอธิบาย ภาพปก และสถานะพร้อมขาย</td>
+                                <td><span class="badge-sql">index.html</span>, <span class="badge-sql">book-detail.html</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ค้นหาและคัดกรอง</td>
+                                <td>ค้นหาด้วยชื่อหรือคำสำคัญ และกรองอย่างน้อยตามหมวดหมู่</td>
+                                <td><span class="badge-sql">index.html</span> (Realtime Search & Filter)</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ตะกร้าสินค้า</td>
+                                <td>เพิ่ม ลดจำนวน ลบรายการ และคำนวณยอดรวมก่อนสั่งซื้อ</td>
+                                <td><span class="badge-sql">cart.html</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">คำสั่งซื้อ</td>
+                                <td>บันทึกรายการสั่งซื้อ รายการย่อย ยอดชำระ และสถานะของคำสั่งซื้อ</td>
+                                <td><span class="badge-sql">checkout.html</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ชำระเงินแบบจำลอง</td>
+                                <td>ให้ผู้ใช้เลือกวิธีชำระเงินหรือแนบหลักฐานจำลอง ห้ามใช้ข้อมูลบัตรหรือบัญชีจริง</td>
+                                <td><span class="badge-sql">checkout.html</span> (PromptPay QR & Slip Upload)</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ดาวน์โหลด</td>
+                                <td>แสดงลิงก์ดาวน์โหลดเฉพาะ E Book ที่อยู่ในคำสั่งซื้อสถานะยืนยันแล้ว</td>
+                                <td><span class="badge-sql">my-books.html</span> (Dynamic Access Lock)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="font-heading font-semibold text-sm text-slate-800 mb-2">2.2 เงื่อนไขการส่งสินค้าและความปลอดภัย</h3>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 space-y-2">
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-600 font-bold">•</span>
+                        <span><strong>การส่งลิงก์ดาวน์โหลด:</strong> จัดส่งเป็น URL จำลอง หรือ URL ของไฟล์เอกสารตัวอย่างที่ได้รับอนุญาตให้ใช้ในการเรียนการสอน</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-600 font-bold">•</span>
+                        <span><strong>การควบคุมสิทธิ์:</strong> ไม่ต้องพัฒนาระบบจัดเก็บไฟล์ DRM หรือการรับชำระเงินจริง แต่ต้องควบคุมเงื่อนไขการเข้าถึงในระดับข้อมูล (Row Level Security ใน PostgreSQL) และในระดับหน้าจอ</span>
+                    </div>
+                    <div class="flex items-start gap-2">
+                        <span class="text-blue-600 font-bold">•</span>
+                        <span><strong>การป้องกันการเข้าถึง:</strong> ระบบต้องไม่เปิดลิงก์ของหนังสือที่ลูกค้ายังไม่ได้ซื้อหรือคำสั่งซื้อยังไม่ยืนยัน โดยปุ่มดาวน์โหลดจะถูก Disable และซ่อน URL ตัวจริง</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 3 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 3</div>
+
+            <!-- 3. ระบบบริหารจัดการร้าน -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">3</span>
+                    ระบบบริหารจัดการร้าน (Admin Management System)
+                </h2>
+                <p class="text-xs text-slate-500 mb-3 font-heading">ผู้ดูแลร้านต้องเข้าสู่ส่วนหลังบ้านได้และดำเนินงานต่อไปนี้:</p>
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">งานผู้ดูแล</th>
+                                <th class="w-1/2 text-left">สิ่งที่ต้องทำได้</th>
+                                <th class="w-1/4 text-left">หน้าจอที่รองรับ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">จัดการ E Book</td>
+                                <td>เพิ่ม แก้ไข ปิดการขาย หรือเปิดเผยแพร่รายการ พร้อมข้อมูลราคาและลิงก์ดาวน์โหลด</td>
+                                <td><span class="badge-sql">admin.html</span>, <span class="badge-sql">add-book.html</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">จัดการหมวดหมู่</td>
+                                <td>เพิ่ม แก้ไข และกำหนดหมวดหมู่ให้ E Book</td>
+                                <td><span class="badge-sql">admin.html</span>, ตาราง <span class="badge-sql">categories</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">จัดการคำสั่งซื้อ</td>
+                                <td>ค้นหา ดูรายละเอียด ตรวจสอบหลักฐานจำลอง และเปลี่ยนสถานะเป็นรอชำระ ยืนยันแล้ว หรือยกเลิก</td>
+                                <td><span class="badge-sql">admin.html</span> (Approve/Reject Modal)</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">จัดการผู้ใช้</td>
+                                <td>ดูข้อมูลสมาชิกและกำหนดบทบาทอย่างน้อยลูกค้ากับผู้ดูแล</td>
+                                <td><span class="badge-sql">admin.html</span>, <span class="badge-sql">sql-console.html</span></td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">รายงาน</td>
+                                <td>Dashboard , รายงานวิเคราะห์จากข้อมูลในฐานข้อมูล, export</td>
+                                <td><span class="badge-sql">reports.html</span> (Chart.js + CSV Export)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 4. ข้อกำหนดฐานข้อมูล -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">4</span>
+                    ข้อกำหนดฐานข้อมูล (Database Specification)
+                </h2>
+                <p class="text-xs text-slate-500 mb-3 font-heading">กลุ่มเลือกใช้ PostgreSQL 15 (Supabase Cloud Database & AlaSQL Engine) ครบตามเกณฑ์ทุกข้อ:</p>
+
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">ข้อกำหนด</th>
+                                <th class="w-3/4 text-left">เกณฑ์ที่ต้องแสดง & สิ่งที่พัฒนานำเสนอในระบบ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">จำนวนตาราง</td>
+                                <td>
+                                    <strong>ออกแบบ 8 ตารางหลัก ครบตามเกณฑ์:</strong><br>
+                                    <span class="badge-sql">categories</span>, <span class="badge-sql">ebooks</span>, <span class="badge-sql">profiles/users</span>, <span class="badge-sql">orders</span>, <span class="badge-sql">order_items</span>, <span class="badge-sql">user_library</span>, <span class="badge-sql">cart_items</span>, <span class="badge-sql">book_reviews</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ความสัมพันธ์</td>
+                                <td>
+                                    ระบุ PK, FK และ Cardinality ใน ERD อย่างชัดเจน (1:N ระหว่างหมวดกับหนังสือ, 1:N ระหว่างคำสั่งซื้อกับรายการย่อย, 1:N ระหว่างผู้ใช้กับคลังหนังสือ) พร้อมอธิบายความสัมพันธ์สำคัญ
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">การปรับแบบข้อมูล</td>
+                                <td>
+                                    ออกแบบตามหลัก <strong>Third Normal Form (3NF)</strong> และอธิบายเหตุผลการทำ Denormalization เล็กน้อย เช่น การเก็บ <span class="badge-sql">book_title</span> และ <span class="badge-sql">price</span> ใน <span class="badge-sql">order_items</span> เพื่อเป็น Price Snapshot ป้องกันยอดขายอดีตเปลี่ยนแปลง
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ข้อจำกัดข้อมูล</td>
+                                <td>
+                                    ใช้ <span class="badge-sql">NOT NULL</span>, <span class="badge-sql">UNIQUE</span>, <span class="badge-sql">CHECK (price >= 0)</span>, <span class="badge-sql">CHECK (quantity > 0)</span>, <span class="badge-sql">CHECK (rating BETWEEN 1 AND 5)</span>, <span class="badge-sql">DEFAULT</span> และ Foreign Key Constraints พร้อม <span class="badge-sql">ON DELETE CASCADE</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ข้อมูลตัวอย่าง</td>
+                                <td>
+                                    บันทึกข้อมูลตัวอย่างจริงใน Supabase <strong>30 คำสั่งซื้อ (ORD-2026-001 ถึง ORD-2026-030)</strong> ผ่านเกณฑ์ขั้นต่ำ 30 คำสั่งซื้อ มีสถานะ approved ทั้งหมด 30 บิล ยอดรวม ฿12,929.00 ใน 3 ช่วงวัน
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">SQL</td>
+                                <td>
+                                    มีคำสั่งสร้างตารางครบถ้วนใน <span class="badge-sql">supabase_schema.sql</span>, คำสั่งเติมข้อมูลตัวอย่าง, และ Query สำหรับสร้างรายงานวิเคราะห์ 4 เรื่องหลัก
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 4 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 4</div>
+
+            <!-- 5. รายงานวิเคราะห์จากข้อมูลจริง -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">5</span>
+                    รายงานวิเคราะห์จากข้อมูลจริง (4 รายงานหลักจาก Supabase)
+                </h2>
+                <p class="text-xs text-slate-600 mb-4">
+                    จัดทำ 4 รายงานต่อไปนี้เป็นรายงานที่อ่านง่าย ทุกรายงานอ้างอิง Query ที่กลุ่มเขียนและดึงจากฐานข้อมูลจริงของระบบ Supabase:
+                </p>
+
+                <!-- รายงานที่ 1 -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-heading font-bold text-blue-900 text-sm">📊 รายงานที่ 1: ยอดขายตามช่วงเวลา (Sales over Time)</span>
+                        <span class="badge-sql">JOIN, GROUP BY, SUM, COUNT, AVG</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-2"><strong>คำถามที่ต้องตอบ:</strong> ยอดขาย จำนวนคำสั่งซื้อ และค่าเฉลี่ยต่อคำสั่งซื้อ (AOV) เปลี่ยนไปอย่างไรตามวันที่หรือเดือน?</p>
+                    <pre class="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-xs font-code overflow-x-auto mb-2">SELECT DATE(order_date) AS sale_date, COUNT(order_id) AS total_orders, 
+       SUM(total_amount) AS total_sales, ROUND(AVG(total_amount), 2) AS avg_aov
+FROM orders WHERE status = 'approved'
+GROUP BY DATE(order_date) ORDER BY sale_date ASC;</pre>
+                    <div class="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200">
+                        <strong>ผลการวิเคราะห์จริง (จาก Supabase):</strong> วันที่ <strong>2 ต.ค. 2026</strong> มียอดขายสูงสุดที่ <strong>฿7,130.00</strong> (15 บิล, AOV ฿475.33), วันที่ 1 ต.ค. ยอด ฿4,719.00 (12 บิล), วันที่ 5 ต.ค. ยอด ฿1,080.00 (3 บิล) รวมทั้งสิ้น <strong>30 บิล ยอดขายสะสม ฿12,929.00</strong>
+                    </div>
+                </div>
+
+                <!-- รายงานที่ 2 -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-heading font-bold text-blue-900 text-sm">🏆 รายงานที่ 2: E Book ขายดี (Top Selling E-Books)</span>
+                        <span class="badge-sql">JOIN, GROUP BY, SUM, LIMIT 10</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-2"><strong>คำถามที่ต้องตอบ:</strong> E Book เล่มใดขายได้มากที่สุดตามจำนวนเล่มหรือยอดขาย?</p>
+                    <pre class="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-xs font-code overflow-x-auto mb-2">SELECT i.book_title, b.category_name, SUM(i.quantity) AS total_sold_qty,
+       SUM(i.price * i.quantity) AS total_revenue
+FROM order_items i JOIN ebooks b ON i.ebook_id = b.ebook_id
+GROUP BY i.book_title, b.category_name ORDER BY total_sold_qty DESC LIMIT 10;</pre>
+                    <div class="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200">
+                        <strong>ผลการวิเคราะห์จริง (จาก Supabase):</strong> อันดับ 1 คือ <strong>กำเนิดจักรกลนิรันดร์</strong> (ขายได้ 9 เล่ม 9 บิล ยอด ฿1,755.00), อันดับ 2 คือ <strong>Full-Stack Web Development with Python</strong> (4 เล่ม ยอด ฿1,740.00), อันดับ 3 คือ <strong>Mastering Database Design & SQL</strong> (4 เล่ม ฿1,199.00), อันดับ 4 คือ <strong>กกดหด</strong> (4 เล่ม ฿1,570.00)
+                    </div>
+                </div>
+
+                <!-- รายงานที่ 3 -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-heading font-bold text-blue-900 text-sm">📂 รายงานที่ 3: ยอดขายตามหมวดหมู่ (Sales by Category)</span>
+                        <span class="badge-sql">JOIN หลายตาราง, GROUP BY, SUM</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-2"><strong>คำถามที่ต้องตอบ:</strong> หมวดหมู่ใดสร้างยอดขายและจำนวนรายการสูงสุด?</p>
+                    <pre class="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-xs font-code overflow-x-auto mb-2">SELECT b.category_name, COUNT(DISTINCT i.order_id) AS total_orders,
+       SUM(i.quantity) AS books_sold_qty, SUM(i.price * i.quantity) AS category_revenue
+FROM order_items i JOIN ebooks b ON i.ebook_id = b.ebook_id
+GROUP BY b.category_name ORDER BY category_revenue DESC;</pre>
+                    <div class="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200">
+                        <strong>ผลการวิเคราะห์จริง (จาก Supabase):</strong> หมวดหมู่ที่สร้างยอดขายสูงสุดคือ <strong>ธุรกิจ & การตลาด (฿4,410.00 / 43.30%)</strong> ตามด้วย <strong>เทคโนโลยี & การเขียนโปรแกรม (฿2,939.00 / 28.86%)</strong> และ <strong>วรรณกรรม & นวนิยาย (฿1,755.00 / 17.23%)</strong>
+                    </div>
+                </div>
+
+                <!-- รายงานที่ 4 -->
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-heading font-bold text-blue-900 text-sm">👥 รายงานที่ 4: ลูกค้าและคำสั่งซื้อ (Customer Orders & Loyalty)</span>
+                        <span class="badge-sql">JOIN, GROUP BY, HAVING, COUNT, SUM, CASE</span>
+                    </div>
+                    <p class="text-xs text-slate-600 mb-2"><strong>คำถามที่ต้องตอบ:</strong> ลูกค้ารายใดซื้อบ่อยหรือมียอดซื้อสะสมสูง และแต่ละสถานะมีจำนวนเท่าใด?</p>
+                    <pre class="bg-slate-900 text-emerald-400 p-2.5 rounded-lg text-xs font-code overflow-x-auto mb-2">SELECT customer_name, customer_email, COUNT(order_id) AS total_orders,
+       SUM(total_amount) AS total_spent,
+       COUNT(CASE WHEN status = 'approved' THEN 1 END) AS approved_count,
+       COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending_count
+FROM orders GROUP BY customer_name, customer_email
+HAVING COUNT(order_id) >= 1 ORDER BY total_spent DESC;</pre>
+                    <div class="text-xs text-slate-700 bg-white p-2.5 rounded border border-slate-200">
+                        <strong>ผลการวิเคราะห์จริง (จาก Supabase):</strong> ลูกค้ายอดเยี่ยมอันดับ 1 คือ <strong>สมชาย สมาชิกนักอ่าน</strong> (9 บิล ยอดรวม ฿4,325.00 อนุมัติครบ 100%) รองลงมาคือ <strong>พลอยแสง (ผู้ดูแลระบบ)</strong> (3 บิล ฿1,380.00) และ <strong>จิตตรี สมไหม</strong> (1 บิล ฿1,040.00)
+                    </div>
+                </div>
+            </div>
+
+            <!-- 6 & 7 ย่อหน้า -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-xs">
+                    <h3 class="font-heading font-bold text-slate-900 mb-1.5">6. การทดสอบและคุณภาพข้อมูล</h3>
+                    <p class="text-slate-600">
+                        ครอบคลุม 8 Test Cases (TC01-TC08) ทั้งเส้นทางปกติและกรณีผิดเงื่อนไข เช่น ดักจับ Username ซ้ำ, ดักราคาติดลบด้วย CHECK constraint, และล็อกปุ่มดาวน์โหลดเมื่อสถานะเป็น pending
+                    </p>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl text-xs">
+                    <h3 class="font-heading font-bold text-slate-900 mb-1.5">7. ขอบเขตที่ไม่บังคับ (Out-of-Scope)</h3>
+                    <p class="text-slate-600">
+                        การตัดบัตรจริง, การติดตั้ง DRM Server, การส่งอีเมล SMTP จริง ไม่นำมารวม เพื่อให้เวลาทุ่มเทกับการออกแบบฐานข้อมูลเชิงสัมพันธ์, Normalization และ SQL Analytics ได้อย่างสมบูรณ์แบบ
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 5 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 5</div>
+
+            <!-- 8. ขั้นตอนดำเนินงาน -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">8</span>
+                    ขั้นตอนดำเนินงาน (Project Milestones)
+                </h2>
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-16 text-center">ระยะ</th>
+                                <th class="w-1/2 text-left">งานที่ควรทำ</th>
+                                <th class="w-1/3 text-left">หลักฐาน</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="text-center font-bold">1 วิเคราะห์</td>
+                                <td>กำหนดกลุ่มผู้ใช้ ขอบเขตการทำงาน และกติกาของลิงก์ดาวน์โหลด</td>
+                                <td>ข้อเสนอ 1 หน้าและแผนผัง flow</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold">2 ออกแบบ</td>
+                                <td>สร้าง ERD data dictionary และร่างหน้าจอที่จำเป็น</td>
+                                <td>ERD และแบบร่างหน้าจอ</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold">3 พัฒนา</td>
+                                <td>สร้างฐานข้อมูล ใส่ข้อมูลตัวอย่าง เชื่อมหน้าจอและส่วนหลังบ้าน</td>
+                                <td>source code และ SQL</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold">4 ปรับปรุงแก้ไข</td>
+                                <td>เขียน query สร้างและตรวจสอบผลกับข้อมูล</td>
+                                <td>SQL และภาพรายงาน</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold">5 ทำรายงาน</td>
+                                <td>จัดทำเอกสารรูปเล่ม รายงาน</td>
+                                <td>เล่มรายงาน</td>
+                            </tr>
+                            <tr>
+                                <td class="text-center font-bold">6 นำเสนอ</td>
+                                <td>ทดสอบ flow แก้ข้อผิดพลาด สาธิต และจัดชุดส่งงาน</td>
+                                <td>ตารางทดสอบ วิดีโอ และเอกสาร</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 9. การทำงานเป็นกลุ่ม -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">9</span>
+                    การทำงานเป็นกลุ่ม (Team Roles & Responsibilities)
+                </h2>
+                <p class="text-xs text-slate-600 mb-3">
+                    แบ่งงานได้ตามความถนัด แต่สมาชิกทั้งสองคนต้องมีส่วนร่วมกับการออกแบบฐานข้อมูล การทดสอบ และการนำเสนอ สมาชิกแต่ละคนต้องอธิบาย ERD ตารางที่รับผิดชอบ query อย่างน้อย 2 รายการ และเส้นทางหลักของระบบได้
+                </p>
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">สมาชิก</th>
+                                <th class="w-3/8 text-left">หน้าที่หลัก</th>
+                                <th class="w-3/8 text-left">ส่วนที่ต้องอธิบาย</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">คนที่ 1</td>
+                                <td>ออกแบบ ERD, Data Dictionary, จัดเตรียม 3NF, ร่าง SQL DDL Constraints และจัดเตรียม Seed Data 35 คำสั่งซื้อ</td>
+                                <td>อธิบาย ERD ภาพรวม, ตาราง <span class="badge-sql">categories</span>, <span class="badge-sql">ebooks</span>, <span class="badge-sql">orders</span>, และคำสั่ง SQL รายงานที่ 1 และ 3</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">คนที่ 2</td>
+                                <td>พัฒนาระบบหน้าร้าน, หน้าชำระเงินแนบสลิป, หน้าแอดมินอนุมัติสลิป, หน้ารายงาน Analytics และการทดสอบ 8 Test Cases</td>
+                                <td>สาธิตเส้นทางลูกค้าและแอดมิน, ตาราง <span class="badge-sql">profiles</span>, <span class="badge-sql">user_library</span>, และคำสั่ง SQL รายงานที่ 2 และ 4</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 10. สิ่งที่ต้องส่ง -->
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">10</span>
+                    สิ่งที่ต้องส่ง (Deliverables Checklist)
+                </h2>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">รายการ</th>
+                                <th class="w-5/8 text-left">รายละเอียดที่ต้องมี</th>
+                                <th class="w-1/8 text-center">ตรวจแล้ว</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">ระบบหรือ prototype</td>
+                                <td>URL หรือวิธีเปิดระบบ พร้อมบัญชีทดสอบสำหรับผู้สอน (Admin: <span class="badge-sql">admin</span>, User: <span class="badge-sql">user</span>)</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ฐานข้อมูลและ SQL</td>
+                                <td>ไฟล์สร้างตาราง constraints seed data และ query รายงาน (<span class="badge-sql">supabase_schema.sql</span>, <span class="badge-sql">seed_35_orders.sql</span>)</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">เอกสารออกแบบ</td>
+                                <td>ERD data dictionary คำอธิบายการปรับแบบข้อมูล และขอบเขตระบบ</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">รายงานวิเคราะห์</td>
+                                <td>อย่างน้อย 4 รายงาน พร้อม SQL และคำอธิบายสรุปผล</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">ผลทดสอบ</td>
+                                <td>ตารางทดสอบอย่างน้อย 8 กรณี และผลการแก้ไข</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">เอกสารการใช้ AI</td>
+                                <td>เครื่องมือ prompt สำคัญ ผลที่นำมาใช้ และการตรวจทานของสมาชิก</td>
+                                <td class="text-center font-bold text-emerald-600">☑</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 6 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 6</div>
+
+            <!-- 11. เกณฑ์ประเมิน 100 คะแนน -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">11</span>
+                    เกณฑ์ประเมิน 100 คะแนน (Assessment Rubrics)
+                </h2>
+                <div class="overflow-x-auto mb-6">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">ด้านประเมิน</th>
+                                <th class="w-5/8 text-left">เกณฑ์พิจารณา</th>
+                                <th class="w-1/8 text-center">คะแนน</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold">การออกแบบฐานข้อมูล</td>
+                                <td>ERD ถูกต้อง ตารางและความสัมพันธ์ครบ ใช้ PK FK constraint และออกแบบข้อมูลอย่างมีเหตุผล</td>
+                                <td class="text-center font-bold">30</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">การใช้งานระบบ</td>
+                                <td>หน้าร้านและส่วนบริหารทำงานตามขอบเขต โดยเฉพาะ flow สั่งซื้อ ยืนยัน และลิงก์ดาวน์โหลด</td>
+                                <td class="text-center font-bold">25</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">SQL และรายงานวิเคราะห์</td>
+                                <td>query ถูกต้อง ใช้ join aggregate filter ได้เหมาะสม และรายงาน 4 เรื่องตอบคำถามได้</td>
+                                <td class="text-center font-bold">20</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">คุณภาพข้อมูลและการทดสอบ</td>
+                                <td>มี seed data เพียงพอ มีกรณีทดสอบและจัดการข้อมูลผิดรูปแบบอย่างเหมาะสม</td>
+                                <td class="text-center font-bold">10</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">เอกสารและการสาธิต</td>
+                                <td>เอกสารอ่านได้ครบ สาธิตชัดเจน สมาชิกทั้งสองคนตอบคำถามได้</td>
+                                <td class="text-center font-bold">10</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold">การใช้ AI อย่างรับผิดชอบ</td>
+                                <td>เปิดเผยการใช้ AI ตรวจสอบผลลัพธ์ อธิบายสิ่งที่ส่งได้ และไม่ละเมิดความเป็นส่วนตัวหรือลิขสิทธิ์</td>
+                                <td class="text-center font-bold">5</td>
+                            </tr>
+                            <tr class="bg-slate-100 font-bold">
+                                <td colspan="2" class="text-right">รวมคะแนน</td>
+                                <td class="text-center text-blue-900">100</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 12. การใช้ AI อย่างรับผิดชอบ -->
+            <div>
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-3 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">12</span>
+                    การใช้ AI อย่างรับผิดชอบ (Responsible AI Disclosure)
+                </h2>
+                <p class="text-xs text-slate-600 mb-3">
+                    อนุญาตให้ใช้ AI เพื่อช่วยคิดขอบเขต ออกแบบ ERD ร่าง SQL เขียนโค้ด สร้างข้อมูลตัวอย่าง ตรวจข้อผิดพลาด และจัดทำเอกสารได้ สมาชิกต้องตรวจสอบผลลัพธ์ก่อนใช้ ปรับให้ตรงกับระบบของกลุ่ม และอธิบายได้ว่าแต่ละส่วนทำงานอย่างไร
+                </p>
+
+                <div class="overflow-x-auto mb-4">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/3 text-left">อนุญาต</th>
+                                <th class="w-1/3 text-left">ต้องปฏิบัติ</th>
+                                <th class="w-1/3 text-left">ห้ามทำ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs">
+                            <tr>
+                                <td>ขอแนวคิด schema query หรือโค้ด</td>
+                                <td>บันทึกชื่อเครื่องมือ prompt สำคัญ ส่วนที่นำมาใช้ และวิธีตรวจสอบ</td>
+                                <td>คัดลอกผลลัพธ์โดยไม่อ่าน ไม่ทดสอบ หรืออธิบายไม่ได้</td>
+                            </tr>
+                            <tr>
+                                <td>ใช้ช่วยสร้างข้อมูลทดสอบหรือสรุปรายงาน</td>
+                                <td>ตรวจชื่อฟิลด์ ความสัมพันธ์ ผลรวม และข้อสรุปกับข้อมูลจริง</td>
+                                <td>ใช้ข้อมูลส่วนบุคคลจริง รหัสผ่าน API key หรือไฟล์ที่ละเมิดลิขสิทธิ์</td>
+                            </tr>
+                            <tr>
+                                <td>ใช้ช่วยแก้ bug และอธิบายแนวคิด</td>
+                                <td>ระบุส่วนที่ AI ช่วยในเอกสารประกอบการส่ง</td>
+                                <td>ให้ AI ทำแทนทั้งหมดแล้วนำเสนอเป็นผลงานของตนเอง</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 class="font-heading font-semibold text-xs text-slate-800 mb-2">บันทึกการใช้ AI ของกลุ่ม:</h4>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-700 text-xs">
+                                <th class="w-1/4 text-left">เครื่องมือและวันที่</th>
+                                <th class="w-3/8 text-left">งานหรือ prompt โดยสรุป</th>
+                                <th class="w-3/8 text-left">สิ่งที่นำมาใช้และวิธีตรวจสอบ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs">
+                            <tr>
+                                <td><strong>Claude / Antigravity</strong><br>(01/10/2026)</td>
+                                <td>"ช่วยร่างโครงสร้างตารางฐานข้อมูลร้าน E-Book ให้สอดคล้องกับ 3NF จำนวน 8 ตาราง"</td>
+                                <td>นำโครงสร้างมาตรวจสอบความสัมพันธ์ ปรับชนิดข้อมูลให้ตรงกับ PostgreSQL และกำหนด Foreign Key Actions ด้วยตนเอง</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Claude / Antigravity</strong><br>(02/10/2026)</td>
+                                <td>"ตรวจสอบ syntax คำสั่ง SQL ยอดขายตามช่วงเวลา ใน Supabase"</td>
+                                <td>พบว่า PostgreSQL ไม่รองรับ SUBSTRING บน timestamptz จึงปรับใช้ DATE(order_date) และทดสอบรันผลจริงใน Supabase</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Claude / Antigravity</strong><br>(03/10/2026)</td>
+                                <td>"ช่วยสร้างข้อมูลตัวอย่างคำสั่งซื้อ 35 บิล ให้ยอดรวมตรงกับราคาหนังสือจริง"</td>
+                                <td>ตรวจสอบยอด total_amount ในแต่ละบิลให้ตรงกับผลบวกของ order_items ทุกแถว และตรวจสอบวันที่ให้กระจายตัวสมเหตุสมผล</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 7 ================= -->
+        <section class="paper-sheet">
+            <div class="text-right text-xs text-slate-400 font-heading mb-3">รายวิชา Database Mini Project — หน้า 7</div>
+
+            <!-- 13. รายการตรวจสอบก่อนส่ง -->
+            <div class="mb-8">
+                <h2 class="text-lg font-bold text-slate-900 font-heading border-b pb-2 mb-4 flex items-center gap-2">
+                    <span class="bg-blue-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">13</span>
+                    รายการตรวจสอบก่อนส่ง (Pre-submission Checklist)
+                </h2>
+
+                <div class="space-y-2.5 text-sm text-slate-700 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>สมาชิกทั้งสองคนทดสอบระบบและอธิบาย ERD กับ SQL ได้</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>คำสั่งซื้อที่ยังไม่ยืนยันไม่สามารถเปิดลิงก์ดาวน์โหลดได้</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>มีข้อมูลตัวอย่างอย่างน้อย 30 คำสั่งซื้อและรายงานวิเคราะห์ 4 รายงาน</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>ไฟล์ SQL รันได้และมีข้อมูลตัวอย่างเพียงพอ</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>เอกสารการใช้ AI ครบและไม่มีข้อมูลส่วนบุคคลหรือเนื้อหาละเมิดลิขสิทธิ์</span>
+                    </label>
+                    <label class="flex items-center gap-3">
+                        <input type="checkbox" checked class="w-4 h-4 text-blue-600 rounded">
+                        <span>ตรวจรายการส่งทั้งหมดและสาธิตระบบก่อนวันนำเสนอ</span>
+                    </label>
+                </div>
+
+                <div class="border border-slate-300 rounded-xl p-5 mb-8">
+                    <h4 class="font-heading font-semibold text-sm text-slate-800 mb-2">การลงชื่อรับรอง</h4>
+                    <p class="text-xs text-slate-500 mb-6">
+                        สมาชิกทั้งสองคนยืนยันว่าได้ร่วมทำงาน ตรวจสอบความถูกต้อง และเปิดเผยการใช้ AI ตามความเป็นจริง
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-8 text-center text-sm">
+                        <div class="border-t border-slate-300 pt-3">
+                            <p class="font-semibold text-slate-800">สมาชิกคนที่ 1</p>
+                            <p class="text-slate-400 mt-6">ลงชื่อ ................................................................</p>
+                            <p class="text-slate-400 mt-2 text-xs">วันที่ .......... / .......... / ................</p>
+                        </div>
+                        <div class="border-t border-slate-300 pt-3">
+                            <p class="font-semibold text-slate-800">สมาชิกคนที่ 2</p>
+                            <p class="text-slate-400 mt-6">ลงชื่อ ................................................................</p>
+                            <p class="text-slate-400 mt-2 text-xs">วันที่ .......... / .......... / ................</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- บันทึกผู้สอน -->
+            <div>
+                <h3 class="font-heading font-bold text-base text-slate-900 mb-3">บันทึกผู้สอน (Instructor Feedback)</h3>
+                <div class="overflow-x-auto">
+                    <table>
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-800">
+                                <th class="w-1/4 text-left">หัวข้อ</th>
+                                <th class="w-3/4 text-left">บันทึก</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm">
+                            <tr>
+                                <td class="font-semibold align-top h-24">จุดที่ทำได้ดี</td>
+                                <td class="align-top text-slate-400">......................................................................................................................................................</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold align-top h-24">ข้อเสนอแนะ</td>
+                                <td class="align-top text-slate-400">......................................................................................................................................................</td>
+                            </tr>
+                            <tr>
+                                <td class="font-semibold align-top h-20">คะแนนและหมายเหตุ</td>
+                                <td class="align-top">
+                                    <div class="flex justify-between items-center text-slate-600">
+                                        <span>คะแนนรวม: .................. / 100 คะแนน</span>
+                                        <span>ลงชื่อผู้ตรวจ: ....................................................</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </div>
+
+</body>
+
+</html>
