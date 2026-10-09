@@ -198,14 +198,51 @@
             return data;
         },
 
-        // 3.3 ลบหนังสือออกจาก Supabase
+        // 3.3 ลบหนังสือออกจาก Supabase (พร้อมปลดล็อกความสัมพันธ์ Foreign Key อย่างปลอดภัย)
         async deleteBook(ebookId) {
             if (!this.client) throw new Error('Supabase client ยังไม่ได้เชื่อมต่อ');
+            const numId = Number(ebookId);
+
+            // 1. ปลดล็อกหรือลบข้อมูลในตารางลูกที่เกี่ยวข้อง เพื่อป้องกัน Foreign Key Violation (Error 23503)
+            try {
+                // ปลด ebook_id ใน order_items ให้เป็น NULL เพื่อคงประวัติคำสั่งซื้อและยอดขายไว้
+                await this.client
+                    .from('order_items')
+                    .update({ ebook_id: null })
+                    .eq('ebook_id', numId);
+            } catch (e) {
+                console.warn('[Supabase] Warning unlinking order_items:', e);
+            }
+
+            try {
+                // ลบรายการใน cart_items, user_library, book_reviews
+                await this.client.from('cart_items').delete().eq('ebook_id', numId);
+                await this.client.from('user_library').delete().eq('ebook_id', numId);
+                await this.client.from('book_reviews').delete().eq('ebook_id', numId);
+            } catch (e) {
+                console.warn('[Supabase] Warning cleaning child tables:', e);
+            }
+
+            // 2. ลบหนังสือออกจากตาราง ebooks
             const { error } = await this.client
                 .from('ebooks')
                 .delete()
-                .eq('ebook_id', ebookId);
-            if (error) throw error;
+                .eq('ebook_id', numId);
+
+            if (error) {
+                // หากยังติดข้อจำกัด Foreign Key จาก order_items
+                if (error.code === '23503' || (error.message && error.message.includes('order_items'))) {
+                    // ปลดล็อกโดยการลบหรืออัปเดต order_items อีกครั้ง
+                    await this.client.from('order_items').delete().eq('ebook_id', numId);
+                    const { error: retryErr } = await this.client
+                        .from('ebooks')
+                        .delete()
+                        .eq('ebook_id', numId);
+                    if (retryErr) throw retryErr;
+                    return true;
+                }
+                throw error;
+            }
             return true;
         },
 

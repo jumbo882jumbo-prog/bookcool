@@ -815,12 +815,10 @@
                             cover: b.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
                             downloadUrl: b.download_url || '#'
                         }));
-                        const localBooks = getStoredBooks();
-                        const map = new Map();
-                        [...formattedSupa, ...localBooks].forEach(b => {
-                            if (!map.has(String(b.id))) map.set(String(b.id), b);
-                        });
-                        allBooks = Array.from(map.values());
+                        allBooks = formattedSupa;
+                        try {
+                            localStorage.setItem('ebooks_store', JSON.stringify(allBooks));
+                        } catch (e) {}
                         renderBooks();
                         console.log('⚡ [bookcool] ซิงก์ข้อมูลหนังสือสดจาก Supabase เรียบร้อยแล้ว:', allBooks.length, 'เล่ม');
                     }

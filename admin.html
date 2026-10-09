@@ -331,13 +331,10 @@
                             category: b.category_name || b.categories?.category_name || 'ทั่วไป',
                             description: b.description || '',
                             cover: b.cover_image || 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=400',
-                            isNew: true
+                            isNew: Number(b.ebook_id) > 8
                         }));
-                        const map = new Map();
-                        [...formattedSupa, ...books].forEach(b => {
-                            if (!map.has(String(b.id))) map.set(String(b.id), b);
-                        });
-                        books = Array.from(map.values());
+                        // ให้ Supabase เป็น Single Source of Truth หากเชื่อมต่อได้
+                        books = formattedSupa;
                         try {
                             localStorage.setItem('ebooks_store', JSON.stringify(books));
                         } catch (e) {}
@@ -346,6 +343,9 @@
             } catch (err) {
                 console.warn('Load admin books from Supabase:', err.message);
             }
+
+            // เรียงลำดับตาม ID จากมากไปน้อย (หนังสือล่าสุดอยู่บนสุด)
+            books.sort((a, b) => Number(b.id) - Number(a.id));
 
             const countEl = document.getElementById('adminBookCount');
             if (countEl) countEl.innerText = `${books.length} เล่ม`;
@@ -358,14 +358,19 @@
                 return;
             }
 
-            tbody.innerHTML = books.map(book => {
+            tbody.innerHTML = books.map((book, idx) => {
                 const priceNum = parseFloat(book.price) || 0;
-                const isNewBadge = book.isNew || Number(book.id) > 4 ? `
+                const isNewBadge = book.isNew || Number(book.id) > 8 ? `
                     <span class="bg-red-100 text-red-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full ml-1.5">ใหม่</span>` : '';
 
                 return `
                 <tr class="hover:bg-slate-50/60 transition">
-                    <td class="p-4 font-mono text-xs text-gray-500">#${book.id}</td>
+                    <td class="p-4 font-mono text-xs">
+                        <div class="flex flex-col">
+                            <span class="font-bold text-gray-800 text-sm">#${book.id}</span>
+                            <span class="text-[10px] text-gray-400 font-sans">ลำดับที่ ${idx + 1}</span>
+                        </div>
+                    </td>
                     <td class="p-4">
                         <div class="flex items-center gap-3">
                             <img src="${book.cover}" alt="${book.title}"
@@ -411,20 +416,30 @@
             const target = books.find(b => String(b.id) === String(bookId));
             if (!target) return;
 
-            if (confirm(`คุณต้องการลบหนังสือ "${target.title}" ออกจากระบบใช่หรือไม่?\n(หนังสือจะไม่แสดงบนหน้าแรกอีกต่อไป)`)) {
-                try {
-                    if (window.bookcoolDb && window.bookcoolDb.client) {
-                        await window.bookcoolDb.deleteBook(bookId);
-                    }
-                } catch (e) {
-                    console.warn('Cannot delete from Supabase:', e);
+            if (!confirm(`คุณต้องการลบหนังสือ "${target.title}" (ID #${target.id}) ออกจากระบบใช่หรือไม่?\n\n⚠️ เมื่อยืนยัน ระบบจะลบออกจากฐานข้อมูล Supabase และหน้าแรก (index.html) ทันที`)) {
+                return;
+            }
+
+            try {
+                // 1. ส่งคำสั่งลบไปยัง Supabase จริงๆ
+                if (window.bookcoolDb && window.bookcoolDb.client) {
+                    await window.bookcoolDb.deleteBook(bookId);
+                    console.log('⚡ [Supabase] ลบหนังสือสำเร็จ ID:', bookId);
                 }
+
+                // 2. ปรับปรุง LocalStorage
                 books = books.filter(b => String(b.id) !== String(bookId));
                 try {
                     localStorage.setItem('ebooks_store', JSON.stringify(books));
                 } catch (e) {}
+
+                // 3. ดึงข้อมูลใหม่และเรนเดอร์หน้าจอ
                 await renderAdminBooks();
-                alert(`🗑️ ลบหนังสือ "${target.title}" สำเร็จ!`);
+                alert(`🗑️ ลบหนังสือ "${target.title}" ออกจากระบบและ Supabase เรียบร้อยแล้ว!`);
+            } catch (e) {
+                console.error('Delete book error:', e);
+                alert(`❌ ไม่สามารถลบหนังสือได้:\n${e.message || e}\n\nกรุณาตรวจสอบการเชื่อมต่อกับ Supabase หรือข้อจำกัด Foreign Key`);
+                await renderAdminBooks();
             }
         }
 
